@@ -1,10 +1,12 @@
 import 'package:adhan/adhan.dart';
 import 'package:flutter/material.dart';
+import 'package:geolocator/geolocator.dart'; // ✅ ضروري
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import 'package:muslim_way/eveningazkar.dart';
 import 'package:muslim_way/morningazkar.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:muslim_way/notification_service.dart';
 
 class HomeTab extends StatefulWidget {
   final Function onLocationRefresh;
@@ -19,13 +21,15 @@ class _HomeTabState extends State<HomeTab> {
   String nextPrayerName = "--";
   String nextPrayerTime = "--";
   String remainingBudget = "0.00";
-  PrayerTimes? _todayPrayerTimes; // متغير لتخزين أوقات اليوم
+  PrayerTimes? _todayPrayerTimes;
 
   @override
   void initState() {
     super.initState();
-    calculatePrayers();
     loadBudgetSummary();
+    
+    // 👇 1. نطلب الإذن هو الأول مباشرة عند الدخول
+    _checkPermissionAndCalculate();
   }
   
   Future<void> loadBudgetSummary() async {
@@ -36,10 +40,62 @@ class _HomeTabState extends State<HomeTab> {
     });
   }
 
+  // 👇 دالة كتفرض طلب الإذن فالبداية
+  Future<void> _checkPermissionAndCalculate() async {
+    LocationPermission permission = await Geolocator.checkPermission();
+    
+    if (permission == LocationPermission.denied) {
+      permission = await Geolocator.requestPermission();
+    }
+
+    // واخا يرفض، كنحاولو نحسبو (يقدر يكون GPS ديجا مسجل)
+    calculatePrayers(); 
+  }
+
+  // 👇 دالة "الشرطي": كتأكد أن GPS شاعل
+  Future<Position> _determinePosition() async {
+    bool serviceEnabled;
+    LocationPermission permission;
+
+    serviceEnabled = await Geolocator.isLocationServiceEnabled();
+    if (!serviceEnabled) {
+      await Geolocator.openLocationSettings();
+      return Future.error('Location services are disabled.');
+    }
+
+    permission = await Geolocator.checkPermission();
+    if (permission == LocationPermission.denied) {
+      permission = await Geolocator.requestPermission();
+      if (permission == LocationPermission.denied) {
+        return Future.error('Location permissions are denied');
+      }
+    }
+    
+    if (permission == LocationPermission.deniedForever) {
+      return Future.error('Location permissions are permanently denied.');
+    }
+
+    return await Geolocator.getCurrentPosition();
+  }
+
   Future<void> calculatePrayers() async {
     final prefs = await SharedPreferences.getInstance();
-    final double? lat = prefs.getDouble('lat');
-    final double? long = prefs.getDouble('long');
+    double? lat = prefs.getDouble('lat');
+    double? long = prefs.getDouble('long');
+
+    // 👇 إلا ماعندناش الإحداثيات، عيط للشرطي يجيبهم
+    if (lat == null || long == null) {
+      try {
+        Position position = await _determinePosition();
+        lat = position.latitude;
+        long = position.longitude;
+        await prefs.setDouble('lat', lat);
+        await prefs.setDouble('long', long);
+      } catch (e) {
+        print("Error getting location: $e");
+        return; 
+      }
+    }
 
     if (lat != null && long != null) {
       final myCoordinates = Coordinates(lat, long);
@@ -50,8 +106,21 @@ class _HomeTabState extends State<HomeTab> {
 
       final prayerTimes = PrayerTimes.today(myCoordinates, params);
       
+      // --- 🔔 الإشعارات ---
+      final notifService = NotificationService();
+      await notifService.requestPermissions(); // طلب إذن الإشعارات
+      await notifService.cancelAll();
+      
+      // جدولة الصلوات
+      await notifService.schedulePrayer(1, "الفجر", prayerTimes.fajr);
+      await notifService.schedulePrayer(2, "الظهر", prayerTimes.dhuhr);
+      await notifService.schedulePrayer(3, "العصر", prayerTimes.asr);
+      await notifService.schedulePrayer(4, "المغرب", prayerTimes.maghrib);
+      await notifService.schedulePrayer(5, "العشاء", prayerTimes.isha);
+      // -------------------
+
       setState(() {
-        _todayPrayerTimes = prayerTimes; // حفظ الأوقات لاستخدامها في اللائحة
+        _todayPrayerTimes = prayerTimes; 
         final next = prayerTimes.nextPrayer();
         final timeFormat = DateFormat.jm();
 
@@ -82,7 +151,7 @@ class _HomeTabState extends State<HomeTab> {
         children: [
           SizedBox(height: 100),
           
-          // 1. بطاقة التاريخ
+          // بطاقة التاريخ
           Container(
             padding: EdgeInsets.symmetric(horizontal: 20),
             child: Row(
@@ -101,7 +170,7 @@ class _HomeTabState extends State<HomeTab> {
           
           SizedBox(height: 20),
 
-          // 2. بطاقة الصلاة القادمة
+          // بطاقة الصلاة القادمة
           Container(
             margin: EdgeInsets.symmetric(horizontal: 15),
             padding: EdgeInsets.all(20),
@@ -120,14 +189,14 @@ class _HomeTabState extends State<HomeTab> {
                     Text(nextPrayerTime, style: GoogleFonts.aBeeZee(color: Colors.amber, fontSize: 20)),
                   ],
                 ),
-                Image.asset('assets/images/logo-muslim-way.png', width: 80), // تأكد من اسم الصورة
+                Image.asset('assets/images/logo-muslim-way.png', width: 80), 
               ],
             ),
           ),
 
           SizedBox(height: 15),
 
-          // --- جديد: شريط أوقات الصلوات الخمس ---
+          // شريط أوقات الصلوات
           if (_todayPrayerTimes != null)
             Container(
               height: 90,
@@ -144,11 +213,10 @@ class _HomeTabState extends State<HomeTab> {
                 ],
               ),
             ),
-          // ------------------------------------
 
           SizedBox(height: 15),
 
-          // 3. ملخص مالي
+          // ملخص مالي
           Container(
             margin: EdgeInsets.symmetric(horizontal: 15),
             padding: EdgeInsets.all(15),
@@ -170,7 +238,7 @@ class _HomeTabState extends State<HomeTab> {
           Divider(color: Colors.white24),
           SizedBox(height: 10),
 
-          // 4. أزرار الأذكار
+          // أزرار الأذكار
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceEvenly,
             children: [
