@@ -1,0 +1,54 @@
+{
+  "project_info": {
+    "project_number": "1028628249874",
+    "project_id": "muslim-way-a50ab",
+    "storage_bucket": "muslim-way-a50ab.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1028628249874:android:bf336f57579df0934647cb",
+        "android_client_info": {
+          "package_name": "com.example.muslim_way"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "1028628249874-q7kc30q0qs65eooh976q74i1td1rig0k.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.muslim_way",
+            "certificate_hash": "699d3488dafc54461757e5212ab28605c401fd4a"
+          }
+        },
+        {
+          "client_id": "1028628249874-98qrh8ahtbeneql55ukek62tt4ct1sgf.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBKXTlBMOldiZH5LVO34gV9lIGn39Lb2hw"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "1028628249874-98qrh8ahtbeneql55ukek62tt4ct1sgf.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "1028628249874-mgt5fobag6voc3dvne2a6ioouhpbfdml.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.example.muslimWay"
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

@@ -1,29 +1,41 @@
 import 'package:flutter/material.dart';
 import 'package:muslim_way/root.dart';
-import 'package:muslim_way/notification_service.dart'; // 1. زدنا هاد الـ Import
+import 'package:workmanager/workmanager.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:adhan/adhan.dart';
+import 'notification_service.dart';
 
-void main() async { // 2. ردينا الدالة async
-  // 3. هاد السطر ضروري باش نضمنو كلشي واجد
-  WidgetsFlutterBinding.ensureInitialized();
-  
-  // 4. هنا كنديمارويو خدمة الإشعارات
-  await NotificationService().init();
+@pragma('vm:entry-point') // 👈 ضرورية جداً
+void callbackDispatcher() {
+  Workmanager().executeTask((task, inputData) async {
+    final prefs = await SharedPreferences.getInstance();
+    final double? lat = prefs.getDouble('lat');
+    final double? long = prefs.getDouble('long');
 
-  runApp(const MyApp());
+    if (lat != null && long != null) {
+      final myCoordinates = Coordinates(lat, long);
+      final params = CalculationMethod.muslim_world_league.getParameters();
+      final prayerTimes = PrayerTimes.today(myCoordinates, params);
+      
+      final currentPrayer = prayerTimes.currentPrayer();
+      if (currentPrayer != Prayer.none && currentPrayer != Prayer.sunrise) {
+        final notifService = NotificationService();
+        await notifService.init();
+        await notifService.showImmediateNotification(
+          "حان موعد الصلاة 🕌",
+          "الله أكبر، الله أكبر.. حي على الصلاة",
+        );
+      }
+    }
+    return Future.value(true);
+  });
 }
 
-class MyApp extends StatelessWidget {
-  const MyApp({super.key});
-  @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
-      debugShowCheckedModeBanner: false,
-      title: 'Muslim Way', // بدلت Title بمرة
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.amber), // درت Amber باش يواتي الديزاين
-        useMaterial3: true,
-      ),
-      home: Root(),
-    );
-  }
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await NotificationService().init();
+  await Workmanager().initialize(callbackDispatcher, isInDebugMode: false);
+  runApp(const MaterialApp(
+    debugShowCheckedModeBanner: false,
+    home: Scaffold(body: Root()))); 
 }

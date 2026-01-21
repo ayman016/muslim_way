@@ -66,7 +66,7 @@ class _MorningazkarState extends State<Morningazkar> {
       body: Stack(
         children: [
           // 1. الخلفية (صورة + طبقة سوداء)
-          Container(
+          SizedBox(
             width: double.infinity,
             height: double.infinity,
             child: Image.asset(

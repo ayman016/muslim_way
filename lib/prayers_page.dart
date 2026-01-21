@@ -44,7 +44,9 @@ class _PrayersPageState extends State<PrayersPage> {
         await prefs.setBool('prayer_done_$i', false);
       }
       setState(() {
-        for (var p in prayers) p['done'] = false;
+        for (var p in prayers) {
+          p['done'] = false;
+        }
       });
     } else {
       // نفس اليوم: تحميل الحالة
