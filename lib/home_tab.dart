@@ -1,5 +1,6 @@
 import 'package:adhan/adhan.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
@@ -42,13 +43,25 @@ class _HomeTabState extends State<HomeTab> {
     });
   }
 
-  Future<void> _checkPermissionAndCalculate() async {
-    LocationPermission permission = await Geolocator.checkPermission();
-    if (permission == LocationPermission.denied) {
-      permission = await Geolocator.requestPermission();
-    }
-    calculatePrayers();
+Future<void> _checkPermissionAndCalculate() async {
+  // 1. طلب إذن الموقع (Location)
+  LocationPermission permission = await Geolocator.checkPermission();
+  if (permission == LocationPermission.denied) {
+    permission = await Geolocator.requestPermission();
   }
+
+  // 2. طلب إذن الإشعارات (Notifications) - ضروري لأندرويد 13+
+  final notifService = NotificationService();
+  await notifService.init(); // كيهيئ المكتبة
+  
+  // هاد السطر كيطلع الـ Popup للمستخدم
+  await notifService.flutterLocalNotificationsPlugin
+      .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>()
+      ?.requestNotificationsPermission();
+
+  // 3. كمل الحساب عادي
+  calculatePrayers(); 
+}
 
   Future<void> calculatePrayers() async {
     final prefs = await SharedPreferences.getInstance();
@@ -108,64 +121,64 @@ class _HomeTabState extends State<HomeTab> {
       body: SingleChildScrollView(
         child: Column(
           children: [
-            const SizedBox(height: 60),
+            const SizedBox(height: 100),
             // 1. Header & Budget
-            _buildHeader(),
-            const SizedBox(height: 20),
             // 2. Next Prayer Card
             _buildNextPrayerCard(),
-            const SizedBox(height: 20),
+            const SizedBox(height: 10),
+            _buildHeader(),
+            const SizedBox(height: 10),
             // 3. Prayer Times List (Scrollable)
             if (_todayPrayerTimes != null) _buildPrayerList(),
-            const SizedBox(height: 25),
+            const SizedBox(height: 35),
             // 4. Azkar Section (إرجاع أذكار الصباح والمساء)
             _buildAzkarSection(),
             const SizedBox(height: 100),
           ],
         ),
       ),
-      floatingActionButton: FloatingActionButton(
-  backgroundColor: Colors.amber,
-  onPressed: () async {
-    // 1. إظهار رسالة بسيطة للمستخدم باش يعرف أن الاختبار بدأ
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text("سيرسل الإشعار بعد 10 ثوانٍ..."), duration: Duration(seconds: 2)),
-    );
+  //     floatingActionButton: FloatingActionButton(
+  //       backgroundColor: Colors.amber,
+  // onPressed: () async {
+  //   // 1. إظهار رسالة بسيطة للمستخدم باش يعرف أن الاختبار بدأ
+  //   ScaffoldMessenger.of(context).showSnackBar(
+  //     const SnackBar(content: Text("سيرسل الإشعار بعد 10 ثوانٍ..."), duration: Duration(seconds: 2)),
+  //   );
 
-    // 2. الانتظار لمدة 10 ثوانٍ
-    await Future.delayed(const Duration(seconds: 10));
+  //   // 2. الانتظار لمدة 10 ثوانٍ
+  //   await Future.delayed(const Duration(seconds: 10));
 
-    // 3. إطلاق الإشعار الفوري
-    final notifService = NotificationService();
-    await notifService.init(); // التأكد من التهيئة
-    await notifService.showImmediateNotification(
-      "اختبار الإشعار المجدول 🔔",
-      "لقد مرت 10 ثوانٍ بنجاح، خدمة الإشعارات تعمل!",
-    );
-  },
-  child: const Icon(Icons.notifications_active, color: Colors.black),
-),
+  //   // 3. إطلاق الإشعار الفوري
+  //   final notifService = NotificationService();
+  //   await notifService.init(); // التأكد من التهيئة
+  //   await notifService.showImmediateNotification(
+  //     "اختبار الإشعار المجدول 🔔",
+  //     "لقد مرت 10 ثوانٍ بنجاح، خدمة الإشعارات تعمل!",
+  //   );
+  // },
+  // child: const Icon(Icons.notifications_active, color: Colors.black),),
     );
   }
 
-  Widget _buildHeader() {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 20),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text("الميزانية المتبقية", style: GoogleFonts.cairo(color: Colors.white70, fontSize: 14)),
-              Text("$remainingBudget DH", style: GoogleFonts.cairo(color: Colors.amber, fontSize: 22, fontWeight: FontWeight.bold)),
-            ],
-          ),
-          IconButton(onPressed: calculatePrayers, icon: const Icon(Icons.refresh, color: Colors.amber)),
-        ],
-      ),
-    );
-  }
+  // Widget _buildHeader() {
+  //   return Padding(
+  //     padding: const EdgeInsets.symmetric(horizontal: 20,vertical: 20),
+      
+  //     child: Row(
+  //       mainAxisAlignment: MainAxisAlignment.spaceBetween,
+  //       children: [
+  //         Column(
+  //           crossAxisAlignment: CrossAxisAlignment.start,
+  //           children: [
+  //             Text("الميزانية المتبقية", style: GoogleFonts.cairo(color: Colors.white70, fontSize: 14)),
+  //             Text("$remainingBudget DH", style: GoogleFonts.cairo(color: Colors.amber, fontSize: 22, fontWeight: FontWeight.bold)),
+  //           ],
+  //         ),
+  //         IconButton(onPressed: calculatePrayers, icon: const Icon(Icons.refresh, color: Colors.amber)),
+  //       ],
+  //     ),
+  //   );
+  // }
 
   Widget _buildNextPrayerCard() {
     return Container(
@@ -191,6 +204,9 @@ class _HomeTabState extends State<HomeTab> {
       ),
     );
   }
+
+
+
 
   Widget _buildPrayerList() {
     return Container(
@@ -220,6 +236,26 @@ class _HomeTabState extends State<HomeTab> {
         children: [
           Text(name, style: GoogleFonts.cairo(color: Colors.white70, fontSize: 12)),
           Text(DateFormat.jm().format(time), style: GoogleFonts.cairo(color: Colors.amber, fontWeight: FontWeight.bold)),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildHeader() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 20,vertical: 20),
+      
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text("الميزانية المتبقية", style: GoogleFonts.cairo(color: Colors.white70, fontSize: 14)),
+              Text("$remainingBudget DH", style: GoogleFonts.cairo(color: Colors.amber, fontSize: 22, fontWeight: FontWeight.bold)),
+            ],
+          ),
+          IconButton(onPressed: calculatePrayers, icon: const Icon(Icons.refresh, color: Colors.amber)),
         ],
       ),
     );
