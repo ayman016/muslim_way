@@ -1,186 +1,82 @@
 import 'package:adhan/adhan.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_local_notifications/flutter_local_notifications.dart';
-import 'package:geolocator/geolocator.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-import 'package:workmanager/workmanager.dart';
-import 'package:muslim_way/notification_service.dart';
-import 'package:muslim_way/morningazkar.dart'; // تأكد من المسار
-import 'package:muslim_way/eveningazkar.dart'; // تأكد من المسار
+import 'package:provider/provider.dart';
+import 'package:muslim_way/providers/prayer_provider.dart';
+import 'package:muslim_way/morningazkar.dart';
+import 'package:muslim_way/eveningazkar.dart';
+import 'package:flutter_animate/flutter_animate.dart'; // ✅ ضروري
 
 class HomeTab extends StatefulWidget {
-  final Function onLocationRefresh;
-  const HomeTab({super.key, required this.onLocationRefresh});
+  const HomeTab({super.key}); 
 
   @override
   State<HomeTab> createState() => _HomeTabState();
 }
 
 class _HomeTabState extends State<HomeTab> {
-  String nextPrayerName = "--";
-  String nextPrayerTime = "--";
-  String remainingBudget = "0.00";
-  PrayerTimes? _todayPrayerTimes;
 
   @override
   void initState() {
     super.initState();
-    _initData();
-  }
-
-  void _initData() async {
-    await loadBudgetSummary();
-    await _checkPermissionAndCalculate();
-  }
-
-  Future<void> loadBudgetSummary() async {
-    final prefs = await SharedPreferences.getInstance();
-    setState(() {
-      double bal = prefs.getDouble('wallet_balance') ?? 0.0;
-      remainingBudget = bal.toStringAsFixed(2);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      Provider.of<PrayerProvider>(context, listen: false).fetchAllData();
     });
-  }
-
-Future<void> _checkPermissionAndCalculate() async {
-  // 1. طلب إذن الموقع (Location)
-  LocationPermission permission = await Geolocator.checkPermission();
-  if (permission == LocationPermission.denied) {
-    permission = await Geolocator.requestPermission();
-  }
-
-  // 2. طلب إذن الإشعارات (Notifications) - ضروري لأندرويد 13+
-  final notifService = NotificationService();
-  await notifService.init(); // كيهيئ المكتبة
-  
-  // هاد السطر كيطلع الـ Popup للمستخدم
-  await notifService.flutterLocalNotificationsPlugin
-      .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>()
-      ?.requestNotificationsPermission();
-
-  // 3. كمل الحساب عادي
-  calculatePrayers(); 
-}
-
-  Future<void> calculatePrayers() async {
-    final prefs = await SharedPreferences.getInstance();
-    double? lat = prefs.getDouble('lat');
-    double? long = prefs.getDouble('long');
-
-    if (lat == null || long == null) {
-      try {
-        Position position = await Geolocator.getCurrentPosition();
-        lat = position.latitude;
-        long = position.longitude;
-        await prefs.setDouble('lat', lat);
-        await prefs.setDouble('long', long);
-      } catch (e) { return; }
-    }
-
-    if (lat != null && long != null) {
-      // 🚀 تفعيل خدمة الخلفية (Workmanager)
-      await Workmanager().registerPeriodicTask(
-        "prayer_check_task",
-        "checkPrayerTime",
-        frequency: const Duration(minutes: 15),
-        existingWorkPolicy: ExistingPeriodicWorkPolicy.replace,
-      );
-
-      final myCoordinates = Coordinates(lat, long);
-      final params = CalculationMethod.muslim_world_league.getParameters();
-      final prayerTimes = PrayerTimes.today(myCoordinates, params);
-
-      setState(() {
-        _todayPrayerTimes = prayerTimes;
-        final next = prayerTimes.nextPrayer();
-        if (next != Prayer.none) {
-          nextPrayerTime = DateFormat.jm().format(prayerTimes.timeForPrayer(next)!);
-          nextPrayerName = _getPrayerArabicName(next);
-        }
-      });
-    }
-  }
-
-  String _getPrayerArabicName(Prayer prayer) {
-    switch (prayer) {
-      case Prayer.fajr: return "الفجر";
-      case Prayer.dhuhr: return "الظهر";
-      case Prayer.asr: return "العصر";
-      case Prayer.maghrib: return "المغرب";
-      case Prayer.isha: return "العشاء";
-      case Prayer.sunrise: return "الشروق";
-      default: return "--";
-    }
   }
 
   @override
   Widget build(BuildContext context) {
+    final provider = Provider.of<PrayerProvider>(context);
+
+    if (provider.isLoading) {
+      return const Center(child: CircularProgressIndicator(color: Colors.amber));
+    }
+
     return Scaffold(
       backgroundColor: Colors.transparent,
       body: SingleChildScrollView(
+        physics: const BouncingScrollPhysics(),
         child: Column(
           children: [
             const SizedBox(height: 100),
-            // 1. Header & Budget
-            // 2. Next Prayer Card
-            _buildNextPrayerCard(),
+            
+            // 1. Next Prayer Card (انيميشن: ظهور + صعود مع نقزة خفيفة)
+            _buildNextPrayerCard(provider)
+                .animate()
+                .fade(duration: 600.ms)
+                .slideY(begin: 0.3, end: 0, curve: Curves.easeOutBack), // Bounce Effect
+            
             const SizedBox(height: 10),
-            _buildHeader(),
+            
+            // 2. Budget Header (انيميشن: جاية من اليسار)
+            _buildHeader(provider)
+                .animate()
+                .fade(duration: 500.ms, delay: 200.ms) // معطلة شوية
+                .slideX(begin: -0.2, end: 0, curve: Curves.easeOut),
+            
             const SizedBox(height: 10),
-            // 3. Prayer Times List (Scrollable)
-            if (_todayPrayerTimes != null) _buildPrayerList(),
+            
+            // 3. Prayer List
+            if (provider.todayPrayerTimes != null) 
+              _buildPrayerList(provider.todayPrayerTimes!),
+            
             const SizedBox(height: 35),
-            // 4. Azkar Section (إرجاع أذكار الصباح والمساء)
-            _buildAzkarSection(),
+            
+            // 4. Azkar (انيميشن: طلوع من التحت)
+            _buildAzkarSection()
+                .animate()
+                .fade(duration: 600.ms, delay: 400.ms)
+                .slideY(begin: 0.2, end: 0, curve: Curves.easeOut),
+            
             const SizedBox(height: 100),
           ],
         ),
       ),
-  //     floatingActionButton: FloatingActionButton(
-  //       backgroundColor: Colors.amber,
-  // onPressed: () async {
-  //   // 1. إظهار رسالة بسيطة للمستخدم باش يعرف أن الاختبار بدأ
-  //   ScaffoldMessenger.of(context).showSnackBar(
-  //     const SnackBar(content: Text("سيرسل الإشعار بعد 10 ثوانٍ..."), duration: Duration(seconds: 2)),
-  //   );
-
-  //   // 2. الانتظار لمدة 10 ثوانٍ
-  //   await Future.delayed(const Duration(seconds: 10));
-
-  //   // 3. إطلاق الإشعار الفوري
-  //   final notifService = NotificationService();
-  //   await notifService.init(); // التأكد من التهيئة
-  //   await notifService.showImmediateNotification(
-  //     "اختبار الإشعار المجدول 🔔",
-  //     "لقد مرت 10 ثوانٍ بنجاح، خدمة الإشعارات تعمل!",
-  //   );
-  // },
-  // child: const Icon(Icons.notifications_active, color: Colors.black),),
     );
   }
 
-  // Widget _buildHeader() {
-  //   return Padding(
-  //     padding: const EdgeInsets.symmetric(horizontal: 20,vertical: 20),
-      
-  //     child: Row(
-  //       mainAxisAlignment: MainAxisAlignment.spaceBetween,
-  //       children: [
-  //         Column(
-  //           crossAxisAlignment: CrossAxisAlignment.start,
-  //           children: [
-  //             Text("الميزانية المتبقية", style: GoogleFonts.cairo(color: Colors.white70, fontSize: 14)),
-  //             Text("$remainingBudget DH", style: GoogleFonts.cairo(color: Colors.amber, fontSize: 22, fontWeight: FontWeight.bold)),
-  //           ],
-  //         ),
-  //         IconButton(onPressed: calculatePrayers, icon: const Icon(Icons.refresh, color: Colors.amber)),
-  //       ],
-  //     ),
-  //   );
-  // }
-
-  Widget _buildNextPrayerCard() {
+  Widget _buildNextPrayerCard(PrayerProvider provider) {
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 15),
       padding: const EdgeInsets.all(20),
@@ -188,6 +84,7 @@ Future<void> _checkPermissionAndCalculate() async {
         gradient: LinearGradient(colors: [Colors.blue.shade900, Colors.black]),
         borderRadius: BorderRadius.circular(25),
         border: Border.all(color: Colors.white10),
+        boxShadow: [const BoxShadow(color: Colors.black45, blurRadius: 10, offset: Offset(0, 5))],
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceAround,
@@ -195,33 +92,61 @@ Future<void> _checkPermissionAndCalculate() async {
           Column(
             children: [
               Text("الصلاة القادمة", style: GoogleFonts.cairo(color: Colors.white60)),
-              Text(nextPrayerName, style: GoogleFonts.cairo(color: Colors.white, fontSize: 32, fontWeight: FontWeight.bold)),
-              Text(nextPrayerTime, style: GoogleFonts.cairo(color: Colors.amber, fontSize: 20)),
+              Text(provider.nextPrayerName, style: GoogleFonts.cairo(color: Colors.white, fontSize: 32, fontWeight: FontWeight.bold)),
+              Text(provider.nextPrayerTime, style: GoogleFonts.cairo(color: Colors.amber, fontSize: 20)),
             ],
           ),
-          const Icon(Icons.mosque, size: 70, color: Colors.white24),
+          const Icon(Icons.mosque, size: 70, color: Colors.white24)
+              .animate(onPlay: (controller) => controller.repeat(reverse: true))
+              .scaleXY(begin: 1, end: 1.1, duration: 2.seconds), // ✅ المسجد كيتنفس (Pulse)
         ],
       ),
     );
   }
 
+  Widget _buildHeader(PrayerProvider provider) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text("الميزانية المتبقية", style: GoogleFonts.cairo(color: Colors.white70, fontSize: 14)),
+              Text("${provider.remainingBudget} DH", style: GoogleFonts.cairo(color: Colors.amber, fontSize: 22, fontWeight: FontWeight.bold)),
+            ],
+          ),
+          IconButton(
+            onPressed: () => provider.fetchAllData(),
+            icon: const Icon(Icons.refresh, color: Colors.amber)
+          ).animate().rotate(duration: 1.seconds, curve: Curves.easeInOut), // ✅ الايقونة كدور فاش تبان
+        ],
+      ),
+    );
+  }
 
+  Widget _buildPrayerList(PrayerTimes times) {
+    // لائحة العناصر اللي غانعرضو
+    List<Widget> items = [
+      _prayerItem("الفجر", times.fajr),
+      _prayerItem("الشروق", times.sunrise),
+      _prayerItem("الظهر", times.dhuhr),
+      _prayerItem("العصر", times.asr),
+      _prayerItem("المغرب", times.maghrib),
+      _prayerItem("العشاء", times.isha),
+    ];
 
-
-  Widget _buildPrayerList() {
     return Container(
       height: 100,
       child: ListView(
         scrollDirection: Axis.horizontal,
         padding: const EdgeInsets.symmetric(horizontal: 10),
-        children: [
-          _prayerItem("الفجر", _todayPrayerTimes!.fajr),
-          _prayerItem("الشروق", _todayPrayerTimes!.sunrise),
-          _prayerItem("الظهر", _todayPrayerTimes!.dhuhr),
-          _prayerItem("العصر", _todayPrayerTimes!.asr),
-          _prayerItem("المغرب", _todayPrayerTimes!.maghrib),
-          _prayerItem("العشاء", _todayPrayerTimes!.isha),
-        ],
+        physics: const BouncingScrollPhysics(),
+        children: items
+            .animate(interval: 100.ms) // ✅ سحر: كل عنصر كيبان مورا لاخور بـ 100ms
+            .fade(duration: 400.ms)
+            .slideX(begin: 0.5, end: 0, curve: Curves.easeOut),
       ),
     );
   }
@@ -236,26 +161,6 @@ Future<void> _checkPermissionAndCalculate() async {
         children: [
           Text(name, style: GoogleFonts.cairo(color: Colors.white70, fontSize: 12)),
           Text(DateFormat.jm().format(time), style: GoogleFonts.cairo(color: Colors.amber, fontWeight: FontWeight.bold)),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildHeader() {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 20,vertical: 20),
-      
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text("الميزانية المتبقية", style: GoogleFonts.cairo(color: Colors.white70, fontSize: 14)),
-              Text("$remainingBudget DH", style: GoogleFonts.cairo(color: Colors.amber, fontSize: 22, fontWeight: FontWeight.bold)),
-            ],
-          ),
-          IconButton(onPressed: calculatePrayers, icon: const Icon(Icons.refresh, color: Colors.amber)),
         ],
       ),
     );
@@ -276,11 +181,16 @@ Future<void> _checkPermissionAndCalculate() async {
       onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => page)),
       child: Column(
         children: [
-          Container(
-            width: 140, height: 140,
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(20),
-              image: DecorationImage(image: AssetImage(img), fit: BoxFit.cover),
+          // استعملنا Hero باش التصويرة "طير" للصفحة الجاية (خاصك تزيد Hero فالصفحة الاخرى باش تكمل)
+          Hero(
+            tag: title, // Tag فريد
+            child: Container(
+              width: 140, height: 140,
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(20),
+                image: DecorationImage(image: AssetImage(img), fit: BoxFit.cover),
+                boxShadow: [const BoxShadow(color: Colors.black45, blurRadius: 8, offset: Offset(0, 4))],
+              ),
             ),
           ),
           const SizedBox(height: 8),

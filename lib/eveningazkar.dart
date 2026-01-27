@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:flutter_animate/flutter_animate.dart'; // 👈 ضروري
 
 class Eveningazkar extends StatefulWidget {
   const Eveningazkar({super.key});
@@ -73,17 +74,17 @@ class _EveningazkarState extends State<Eveningazkar> {
             width: double.infinity,
             height: double.infinity,
             child: Image.asset(
-              'assets/images/drawerbg.jpg', // يمكنك تغيير الصورة هنا لتتميز عن الصباح
+              'assets/images/drawerbg.jpg',
               fit: BoxFit.cover,
             ),
           ),
-          // طبقة داكنة فوق الصورة لتوضيح النص
+          // طبقة داكنة للمساء (Dark Overlay)
           Container(
             decoration: BoxDecoration(
               gradient: LinearGradient(
                 colors: [
-                  Colors.black.withOpacity(0.9), // لون أغمق قليلاً للمساء
-                  Colors.deepPurple.withOpacity(0.5) // لمسة بنفسجية للمساء
+                  Colors.black.withOpacity(0.9), 
+                  Colors.deepPurple.withOpacity(0.5)
                 ],
                 begin: Alignment.bottomCenter,
                 end: Alignment.topCenter,
@@ -94,6 +95,7 @@ class _EveningazkarState extends State<Eveningazkar> {
           // 2. القائمة
           SafeArea(
             child: ListView.builder(
+              physics: const BouncingScrollPhysics(), // سكرول ممتع
               padding: const EdgeInsets.all(16),
               itemCount: azkarList.length,
               itemBuilder: (context, index) {
@@ -104,11 +106,11 @@ class _EveningazkarState extends State<Eveningazkar> {
 
                 return GestureDetector(
                   onTap: () {
-                    setState(() {
-                      if (currentCount > 0) {
+                    if (currentCount > 0) {
+                      setState(() {
                         azkarList[index]['current_count'] = currentCount - 1;
-                      }
-                    });
+                      });
+                    }
                   },
                   child: AnimatedContainer(
                     duration: const Duration(milliseconds: 300),
@@ -125,6 +127,10 @@ class _EveningazkarState extends State<Eveningazkar> {
                             : Colors.white.withOpacity(0.3),
                         width: 1,
                       ),
+                      // لمعة خفيفة عند الانتهاء
+                      boxShadow: isFinished 
+                          ? [BoxShadow(color: Colors.greenAccent.withOpacity(0.3), blurRadius: 15)]
+                          : [],
                     ),
                     child: Column(
                       children: [
@@ -134,16 +140,18 @@ class _EveningazkarState extends State<Eveningazkar> {
                           style: GoogleFonts.cairo(
                             color: Colors.white,
                             fontSize: 18,
-                            height: 1.6, // تباعد الأسطر للقراءة المريحة
-                            decoration:
-                                isFinished ? TextDecoration.lineThrough : null,
+                            height: 1.6,
+                            decoration: isFinished ? TextDecoration.lineThrough : null,
+                            decorationColor: Colors.white70,
                           ),
                         ),
                         const SizedBox(height: 15),
                         const Divider(color: Colors.white24),
+                        
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
+                            // دائرة العداد (مع انيميشن التكبير)
                             Container(
                               padding: const EdgeInsets.all(10),
                               decoration: const BoxDecoration(
@@ -158,34 +166,50 @@ class _EveningazkarState extends State<Eveningazkar> {
                                   fontSize: 16,
                                 ),
                               ),
-                            ),
+                            )
+                            .animate(key: ValueKey(currentCount)) // 👈 يعيد الانيميشن عند تغير الرقم
+                            .scale(duration: 200.ms, curve: Curves.easeOutBack),
+
+                            // شريط التقدم السلس
                             Expanded(
                               child: Padding(
-                                padding:
-                                    const EdgeInsets.symmetric(horizontal: 10),
+                                padding: const EdgeInsets.symmetric(horizontal: 10),
                                 child: ClipRRect(
                                   borderRadius: BorderRadius.circular(10),
-                                  child: LinearProgressIndicator(
-                                    value: isFinished
-                                        ? 1
-                                        : (count - currentCount) / count,
-                                    backgroundColor:
-                                        Colors.grey.withOpacity(0.3),
-                                    color: Colors.amber,
-                                    minHeight: 8,
+                                  child: TweenAnimationBuilder<double>(
+                                    duration: const Duration(milliseconds: 500),
+                                    curve: Curves.easeOut,
+                                    tween: Tween<double>(
+                                      begin: 0, 
+                                      end: isFinished ? 1 : (count - currentCount) / count
+                                    ),
+                                    builder: (context, value, _) => LinearProgressIndicator(
+                                      value: value,
+                                      backgroundColor: Colors.grey.withOpacity(0.3),
+                                      color: isFinished ? Colors.white : Colors.amber,
+                                      minHeight: 8,
+                                    ),
                                   ),
                                 ),
                               ),
                             ),
+                            
+                            // نص الإنجاز (يهتز عند الانتهاء)
                             Text(
-                              isFinished ? "تم" : "تكرار: $count",
+                              isFinished ? "تم ✅" : "تكرار: $count",
                               style: const TextStyle(color: Colors.white70),
                             )
+                            .animate(target: isFinished ? 1 : 0)
+                            .shake(hz: 4, curve: Curves.easeInOut),
                           ],
                         )
                       ],
                     ),
-                  ),
+                  )
+                  // 👈 انيميشن الدخول المتتابع (Staggered)
+                  .animate()
+                  .fade(duration: 500.ms, delay: (100 * index).ms)
+                  .slideX(begin: 0.2, end: 0, curve: Curves.easeOut), 
                 );
               },
             ),

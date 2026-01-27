@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+// ❌ ما بقيناش محتاجين shared_preferences هنا
 
 class AddTaskPage extends StatefulWidget {
   const AddTaskPage({super.key});
@@ -15,18 +15,15 @@ class _AddTaskPageState extends State<AddTaskPage> {
 
   final List<String> categories = ["شخصي", "عمل", "دين", "دراسة", "تسوق"];
 
-  Future<void> saveTask() async {
+  void saveTask() {
     if (titleController.text.isEmpty) return;
     
-    final prefs = await SharedPreferences.getInstance();
-    List<String> tasks = prefs.getStringList('user_tasks') ?? [];
-    
-    // حفظ بصيغة: العنوان|التصنيف
+    // 1. تنسيق المهمة كيف ما اتفقنا: العنوان|التصنيف
     String newTask = "${titleController.text}|$selectedCategory";
-    tasks.add(newTask);
     
-    await prefs.setStringList('user_tasks', tasks);
-    Navigator.pop(context, true); // الرجوع مع نتيجة نجاح
+    // 2. إرجاع المهمة للصفحة السابقة (NotesPage)
+    // NotesPage هو اللي غايتكلف بالحفظ فـ Firestore
+    Navigator.pop(context, newTask); 
   }
 
   @override
@@ -37,7 +34,7 @@ class _AddTaskPageState extends State<AddTaskPage> {
         backgroundColor: Colors.transparent,
         title: Text("مهمة جديدة", style: GoogleFonts.cairo(color: Colors.white)),
         centerTitle: true,
-        iconTheme: IconThemeData(color: Colors.amber),
+        iconTheme: const IconThemeData(color: Colors.amber),
       ),
       body: Padding(
         padding: const EdgeInsets.all(20.0),
@@ -47,24 +44,24 @@ class _AddTaskPageState extends State<AddTaskPage> {
             Text("عنوان المهمة", style: GoogleFonts.cairo(color: Colors.grey)),
             TextField(
               controller: titleController,
-              style: TextStyle(color: Colors.white, fontSize: 20),
-              decoration: InputDecoration(
+              style: const TextStyle(color: Colors.white, fontSize: 20),
+              decoration: const InputDecoration(
                 hintText: "ماذا تريد أن تنجز؟",
                 hintStyle: TextStyle(color: Colors.white24),
                 enabledBorder: UnderlineInputBorder(borderSide: BorderSide(color: Colors.amber)),
                 focusedBorder: UnderlineInputBorder(borderSide: BorderSide(color: Colors.amber, width: 2)),
               ),
             ),
-            SizedBox(height: 30),
+            const SizedBox(height: 30),
             
             Text("نوع المهمة", style: GoogleFonts.cairo(color: Colors.grey)),
-            SizedBox(height: 10),
+            const SizedBox(height: 10),
             Wrap(
               spacing: 10,
               children: categories.map((cat) {
                 bool isSelected = selectedCategory == cat;
                 return ChoiceChip(
-                  label: Text(cat, style: GoogleFonts.cairo(color: isSelected ? Colors.black : Colors.white)),
+                  label: Text(cat, style: GoogleFonts.cairo(color: isSelected ? Colors.black : Colors.black)),
                   selected: isSelected,
                   selectedColor: Colors.amber,
                   backgroundColor: Colors.grey.withOpacity(0.2),
@@ -77,7 +74,7 @@ class _AddTaskPageState extends State<AddTaskPage> {
               }).toList(),
             ),
             
-            Spacer(),
+            const Spacer(),
             
             SizedBox(
               width: double.infinity,

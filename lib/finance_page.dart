@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import 'package:provider/provider.dart'; // ✅
+import 'package:muslim_way/services/firestore_service.dart';
+import 'package:muslim_way/providers/language_provider.dart'; // ✅
 
 class FinancePage extends StatefulWidget {
   const FinancePage({super.key});
@@ -12,6 +14,7 @@ class FinancePage extends StatefulWidget {
 class _FinancePageState extends State<FinancePage> {
   double balance = 0.0;
   List<String> transactions = [];
+  bool isLoading = true;
 
   @override
   void initState() {
@@ -20,40 +23,46 @@ class _FinancePageState extends State<FinancePage> {
   }
 
   Future<void> loadFinanceData() async {
-    final prefs = await SharedPreferences.getInstance();
-    setState(() {
-      balance = prefs.getDouble('wallet_balance') ?? 0.0;
-      transactions = prefs.getStringList('wallet_transactions') ?? [];
-    });
-
-    // --- جديد: السؤال عن الرصيد إذا كان 0 ---
-    if (balance == 0.0) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        _showInitialBalanceDialog();
+    setState(() => isLoading = true);
+    await FirestoreService().createUserIfNotExists();
+    final data = await FirestoreService().getUserData();
+    
+    if (mounted) {
+      setState(() {
+        if (data != null) {
+          balance = (data['wallet_balance'] as num?)?.toDouble() ?? 0.0;
+          transactions = List<String>.from(data['wallet_transactions'] ?? []);
+        }
+        isLoading = false;
       });
+      if (balance == 0.0 && transactions.isEmpty) {
+         // تأخير بسيط باش مايطلعش الديالوج قبل ما تبنا الصفحة
+         Future.delayed(Duration.zero, () => _showInitialBalanceDialog());
+      }
     }
   }
   
-  // دالة نافذة الرصيد الأولي
   void _showInitialBalanceDialog() {
+    final lang = Provider.of<LanguageProvider>(context, listen: false); // ✅
     TextEditingController controller = TextEditingController();
+    
     showDialog(
       context: context,
-      barrierDismissible: false, // لا يمكن إغلاقها بالضغط خارجاً
+      barrierDismissible: false,
       builder: (context) => AlertDialog(
         backgroundColor: Colors.grey.shade900,
-        title: Text("مرحباً بك في قسم المال", style: GoogleFonts.cairo(color: Colors.amber)),
+        title: Text(lang.t('start_balance_title'), style: GoogleFonts.cairo(color: Colors.amber)),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-             Text("كم هو رصيدك الحالي لتبدأ به؟", style: GoogleFonts.cairo(color: Colors.white)),
-             SizedBox(height: 10),
+             Text(lang.t('start_balance_ask'), style: GoogleFonts.cairo(color: Colors.white)),
+             const SizedBox(height: 10),
              TextField(
                controller: controller,
                keyboardType: TextInputType.number,
-               style: TextStyle(color: Colors.white),
-               decoration: InputDecoration(
-                 hintText: "مثلاً: 500",
+               style: const TextStyle(color: Colors.white),
+               decoration: const InputDecoration(
+                 hintText: "500",
                  hintStyle: TextStyle(color: Colors.grey),
                  enabledBorder: UnderlineInputBorder(borderSide: BorderSide(color: Colors.amber)),
                ),
@@ -62,29 +71,25 @@ class _FinancePageState extends State<FinancePage> {
         ),
         actions: [
           TextButton(
-            onPressed: () {
-               Navigator.pop(context); // إغلاق بدون حفظ (يبقى 0)
-            }, 
-            child: Text("تخطي", style: TextStyle(color: Colors.grey))
+            onPressed: () => Navigator.pop(context), 
+            child: Text(lang.t('skip'), style: const TextStyle(color: Colors.grey))
           ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(backgroundColor: Colors.amber),
             onPressed: () {
               if (controller.text.isNotEmpty) {
-                addTransaction(double.parse(controller.text), true, "رصيد أولي");
+                addTransaction(double.parse(controller.text), true, lang.t('current_balance')); // رصيد أولي
                 Navigator.pop(context);
               }
             }, 
-            child: Text("بدء", style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold))
+            child: Text(lang.t('start'), style: const TextStyle(color: Colors.black, fontWeight: FontWeight.bold))
           )
         ],
       ),
     );
   }
-  // -------------------------------------
-
+  
   Future<void> addTransaction(double amount, bool isIncome, String category) async {
-    final prefs = await SharedPreferences.getInstance();
     setState(() {
       if (isIncome) {
         balance += amount;
@@ -92,23 +97,19 @@ class _FinancePageState extends State<FinancePage> {
         balance -= amount;
       }
       String typeSymbol = isIncome ? "+" : "-";
+      // نسجلو التاريخ والوقت
       transactions.insert(0, "$typeSymbol $amount|$category|${DateTime.now().toString()}");
     });
-    
-    await prefs.setDouble('wallet_balance', balance);
-    await prefs.setStringList('wallet_transactions', transactions);
+    await FirestoreService().updateFinance(balance, transactions);
   }
 
-  // ... (باقي الكود كما هو: showAddTransactionSheet و build)
-  // سأختصر هنا، فقط انسخ دالة showAddTransactionSheet والـ build من الكود القديم وضعهما هنا
-  // ...
-  
-  // (ضع هنا دالة showAddTransactionSheet القديمة كاملة)
   void showAddTransactionSheet() {
+    final lang = Provider.of<LanguageProvider>(context, listen: false); // ✅
     bool isIncome = false;
     TextEditingController amountController = TextEditingController();
     String selectedCategory = "أخرى";
     
+    // هادو ممكن تزيد ليهم الترجمة حتى هما فالمستقبل
     final categories = [
       {'icon': Icons.fastfood, 'name': 'أكل'},
       {'icon': Icons.directions_bus, 'name': 'مواصلات'},
@@ -116,7 +117,6 @@ class _FinancePageState extends State<FinancePage> {
       {'icon': Icons.work, 'name': 'راتب'},
       {'icon': Icons.lightbulb, 'name': 'فواتير'},
       {'icon': Icons.health_and_safety, 'name': 'صحة'},
-      {'icon': Icons.account_balance, 'name': 'رصيد أولي'},
     ];
 
     showModalBottomSheet(
@@ -128,69 +128,65 @@ class _FinancePageState extends State<FinancePage> {
           builder: (BuildContext context, StateSetter setModalState) {
             return Container(
               height: 600,
-              decoration: BoxDecoration(
+              decoration: const BoxDecoration(
                 color: Color(0xFF1E1E1E),
                 borderRadius: BorderRadius.vertical(top: Radius.circular(30)),
               ),
-              padding: EdgeInsets.all(20),
+              padding: const EdgeInsets.all(20),
               child: Column(
                 children: [
-                  Container(height: 5, width: 50, color: Colors.grey, margin: EdgeInsets.only(bottom: 20)),
-                  Text("إضافة معاملة", style: GoogleFonts.cairo(color: Colors.white, fontSize: 20)),
-                  SizedBox(height: 20),
-                  
-                  // Toggle Income/Expense
+                  Container(height: 5, width: 50, color: Colors.grey, margin: const EdgeInsets.only(bottom: 20)),
+                  Text(lang.t('add_transaction'), style: GoogleFonts.cairo(color: Colors.white, fontSize: 20)),
+                  const SizedBox(height: 20),
                   Row(
                     children: [
                       Expanded(
                         child: GestureDetector(
                           onTap: () => setModalState(() => isIncome = false),
                           child: Container(
-                            padding: EdgeInsets.symmetric(vertical: 12),
+                            padding: const EdgeInsets.symmetric(vertical: 12),
                             decoration: BoxDecoration(
                               color: !isIncome ? Colors.red.withOpacity(0.2) : Colors.transparent,
                               border: Border.all(color: Colors.red),
                               borderRadius: BorderRadius.circular(10),
                             ),
-                            child: Center(child: Text("مصروف", style: GoogleFonts.cairo(color: Colors.red))),
+                            child: Center(child: Text(lang.t('expense'), style: GoogleFonts.cairo(color: Colors.red))),
                           ),
                         ),
                       ),
-                      SizedBox(width: 10),
+                      const SizedBox(width: 10),
                       Expanded(
                         child: GestureDetector(
                           onTap: () => setModalState(() => isIncome = true),
                           child: Container(
-                            padding: EdgeInsets.symmetric(vertical: 12),
+                            padding: const EdgeInsets.symmetric(vertical: 12),
                             decoration: BoxDecoration(
                               color: isIncome ? Colors.green.withOpacity(0.2) : Colors.transparent,
                               border: Border.all(color: Colors.green),
                               borderRadius: BorderRadius.circular(10),
                             ),
-                            child: Center(child: Text("دخل", style: GoogleFonts.cairo(color: Colors.green))),
+                            child: Center(child: Text(lang.t('income'), style: GoogleFonts.cairo(color: Colors.green))),
                           ),
                         ),
                       ),
                     ],
                   ),
-                  
-                  SizedBox(height: 20),
+                  const SizedBox(height: 20),
                   TextField(
                     controller: amountController,
                     keyboardType: TextInputType.number,
-                    style: TextStyle(color: Colors.white, fontSize: 30),
+                    style: const TextStyle(color: Colors.white, fontSize: 30),
                     textAlign: TextAlign.center,
-                    decoration: InputDecoration(
+                    decoration: const InputDecoration(
                       hintText: "0.00",
                       hintStyle: TextStyle(color: Colors.grey),
                       border: InputBorder.none,
                     ),
                   ),
-                  SizedBox(height: 20),
-                  
+                  const SizedBox(height: 20),
                   Expanded(
                     child: GridView.builder(
-                      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount: 3, crossAxisSpacing: 10, mainAxisSpacing: 10),
+                      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount: 3, crossAxisSpacing: 10, mainAxisSpacing: 10),
                       itemCount: categories.length,
                       itemBuilder: (context, index) {
                         bool isSelected = selectedCategory == categories[index]['name'];
@@ -213,7 +209,6 @@ class _FinancePageState extends State<FinancePage> {
                       },
                     ),
                   ),
-                  
                   SizedBox(width: double.infinity, height: 50, child: ElevatedButton(
                     style: ElevatedButton.styleFrom(backgroundColor: Colors.amber),
                     onPressed: () {
@@ -222,7 +217,7 @@ class _FinancePageState extends State<FinancePage> {
                         Navigator.pop(context);
                       }
                     },
-                    child: Text("حفظ", style: GoogleFonts.cairo(color: Colors.black, fontWeight: FontWeight.bold)),
+                    child: Text(lang.t('save'), style: GoogleFonts.cairo(color: Colors.black, fontWeight: FontWeight.bold)),
                   )),
                 ],
               ),
@@ -235,90 +230,106 @@ class _FinancePageState extends State<FinancePage> {
 
   @override
   Widget build(BuildContext context) {
+    final lang = Provider.of<LanguageProvider>(context); // ✅ استدعاء المترجم
+
+    if (isLoading) {
+      return const Scaffold(
+        backgroundColor: Colors.transparent,
+        body: Center(child: CircularProgressIndicator(color: Colors.amber)),
+      );
+    }
+    
     return Scaffold(
-      backgroundColor: Colors.black,
-      body: Stack(
-        children: [
-           Positioned.fill(
-            child: Opacity(
-              opacity: 0.3,
-              child: Image.asset('assets/images/mainbg.jpg', fit: BoxFit.cover),
-            ),
-          ),
-          SafeArea(
-            child: Column(
-              children: [
-                SizedBox(height: 20),
-                Container(
-                  margin: EdgeInsets.all(20),
-                  height: 200,
-                  width: double.infinity,
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      colors: [Color(0xFFFFD700), Color(0xFFB8860B)],
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
+      backgroundColor: Colors.transparent,
+      body: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.only(top: 80),
+          child: Column(
+            children: [
+              const SizedBox(height: 10),
+              // بطاقة الرصيد
+              Container(
+                margin: const EdgeInsets.all(20),
+                height: 200,
+                width: double.infinity,
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    colors: [Color(0xFFFFD700), Color(0xFFB8860B)],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  borderRadius: BorderRadius.circular(25),
+                  boxShadow: [BoxShadow(color: Colors.amber.withOpacity(0.3), blurRadius: 20, offset: const Offset(0, 10))],
+                ),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(lang.t('current_balance'), style: GoogleFonts.cairo(color: Colors.black54, fontSize: 18)),
+                    Text(
+                      "${balance.toStringAsFixed(2)} DH",
+                      style: GoogleFonts.cairo(color: Colors.black, fontSize: 40, fontWeight: FontWeight.bold),
                     ),
-                    borderRadius: BorderRadius.circular(25),
-                    boxShadow: [BoxShadow(color: Colors.amber.withOpacity(0.3), blurRadius: 20, offset: Offset(0, 10))],
-                  ),
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Text("الرصيد الحالي", style: GoogleFonts.cairo(color: Colors.black54, fontSize: 18)),
-                      Text(
-                        "${balance.toStringAsFixed(2)} DH",
-                        style: GoogleFonts.cairo(color: Colors.black, fontSize: 40, fontWeight: FontWeight.bold),
+                    const SizedBox(height: 10),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 5),
+                      decoration: BoxDecoration(color: Colors.black12, borderRadius: BorderRadius.circular(20)),
+                      child: Text(lang.t('money_quote'), style: GoogleFonts.reemKufi(color: Colors.black87)),
+                    )
+                  ],
+                ),
+              ),
+              
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    IconButton(onPressed: showAddTransactionSheet, icon: const Icon(Icons.add_circle, color: Colors.amber, size: 30)),
+                    Text(lang.t('recent_transactions'), style: GoogleFonts.cairo(color: Colors.white, fontSize: 20)),
+                  ],
+                ),
+              ),
+              
+              Expanded(
+                child: transactions.isEmpty 
+                  // ✅ تحسين شكل الـ Empty State
+                  ? Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(Icons.receipt_long, size: 70, color: Colors.white.withOpacity(0.2)),
+                          const SizedBox(height: 10),
+                          Text(lang.t('empty_finance'), style: GoogleFonts.cairo(color: Colors.white54)),
+                        ],
                       ),
-                      SizedBox(height: 10),
-                      Container(
-                        padding: EdgeInsets.symmetric(horizontal: 15, vertical: 5),
-                        decoration: BoxDecoration(color: Colors.black12, borderRadius: BorderRadius.circular(20)),
-                        child: Text("المال زينة الحياة الدنيا", style: GoogleFonts.reemKufi(color: Colors.black87)),
-                      )
-                    ],
-                  ),
-                ),
-                
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 20),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      IconButton(onPressed: showAddTransactionSheet, icon: Icon(Icons.add_circle, color: Colors.amber, size: 30)),
-                      Text("آخر المعاملات", style: GoogleFonts.cairo(color: Colors.white, fontSize: 20)),
-                    ],
-                  ),
-                ),
-                
-                Expanded(
-                  child: ListView.builder(
+                    )
+                  : ListView.builder(
+                    padding: const EdgeInsets.only(bottom: 100),
                     itemCount: transactions.length,
                     itemBuilder: (context, index) {
                       List<String> data = transactions[index].split('|');
                       bool isIncome = data[0].contains("+");
                       return Card(
                         color: Colors.grey.withOpacity(0.1),
-                        margin: EdgeInsets.symmetric(horizontal: 15, vertical: 5),
+                        margin: const EdgeInsets.symmetric(horizontal: 15, vertical: 5),
                         child: ListTile(
                           leading: Icon(
                             isIncome ? Icons.arrow_downward : Icons.arrow_upward,
                             color: isIncome ? Colors.green : Colors.red,
                           ),
-                          title: Text(data[1], style: GoogleFonts.cairo(color: Colors.white)), // Category
+                          title: Text(data[1], style: GoogleFonts.cairo(color: Colors.white)),
                           trailing: Text(
-                            data[0], // Amount
+                            data[0],
                             style: GoogleFonts.cairo(color: isIncome ? Colors.green : Colors.red, fontSize: 18),
                           ),
                         ),
                       );
                     },
                   ),
-                )
-              ],
-            ),
+              )
+            ],
           ),
-        ],
+        ),
       ),
     );
   }

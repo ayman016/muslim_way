@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:flutter_animate/flutter_animate.dart'; // 👈 ضروري
 
 class Morningazkar extends StatefulWidget {
   const Morningazkar({super.key});
@@ -9,13 +10,12 @@ class Morningazkar extends StatefulWidget {
 }
 
 class _MorningazkarState extends State<Morningazkar> {
-  // قائمة الأذكار مع العدد المطلوب لكل ذكر
-  // List of Maps: كل عنصر يحتوي على النص والعدد
+  // قائمة الأذكار
   List<Map<String, dynamic>> azkarList = [
     {
       "text": "اللَّهُمَّ بِكَ أَصْبَحْنَا، وَبِكَ أَمْسَيْنَا، وَبِكَ نَحْيَا، وَبِكَ نَمُوتُ، وَإِلَيْكَ النُّشُورُ",
       "count": 1,
-      "current_count": 1 // هذا العداد الذي سنقوم بإنقاصه
+      "current_count": 1
     },
     {
       "text": "اللَّهُمَّ أَنْتَ رَبِّي لَا إِلَهَ إِلَّا أَنْتَ، خَلَقْتَنِي وَأَنَا عَبْدُكَ، وَأَنَا عَلَى عَهْدِكَ وَوَعْدِكَ مَا اسْتَطَعْتُ، أَعُوذُ بِكَ مِنْ شَرِّ مَا صَنَعْتُ، أَبُوءُ لَكَ بِنِعْمَتِكَ عَلَيَّ، وَأَبُوءُ بِذَنْبِي فَاغْفِرْ لِي فَإِنَّهُ لَا يَغْفِرُ الذُّنُوبَ إِلَّا أَنْتَ",
@@ -47,10 +47,9 @@ class _MorningazkarState extends State<Morningazkar> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      // لا نحتاج للون خلفية لأننا سنستخدم صورة
-      extendBodyBehindAppBar: true, // يجعل الـ AppBar شفافاً فوق الخلفية
+      extendBodyBehindAppBar: true,
       appBar: AppBar(
-        iconTheme: IconThemeData(color: Colors.white),
+        iconTheme: const IconThemeData(color: Colors.white),
         backgroundColor: Colors.transparent,
         elevation: 0,
         centerTitle: true,
@@ -65,12 +64,12 @@ class _MorningazkarState extends State<Morningazkar> {
       ),
       body: Stack(
         children: [
-          // 1. الخلفية (صورة + طبقة سوداء)
+          // 1. الخلفية
           SizedBox(
             width: double.infinity,
             height: double.infinity,
             child: Image.asset(
-              'assets/images/drawerbg.jpg', // تأكد من وجود الصورة أو غير الاسم
+              'assets/images/drawerbg.jpg', 
               fit: BoxFit.cover,
             ),
           ),
@@ -90,10 +89,10 @@ class _MorningazkarState extends State<Morningazkar> {
           // 2. قائمة الأذكار
           SafeArea(
             child: ListView.builder(
-              padding: EdgeInsets.all(16),
+              physics: const BouncingScrollPhysics(), // سكرول رطب
+              padding: const EdgeInsets.all(16),
               itemCount: azkarList.length,
               itemBuilder: (context, index) {
-                // استخراج البيانات لتسهيل الاستخدام
                 int count = azkarList[index]['count'];
                 int currentCount = azkarList[index]['current_count'];
                 String text = azkarList[index]['text'];
@@ -101,19 +100,17 @@ class _MorningazkarState extends State<Morningazkar> {
 
                 return GestureDetector(
                   onTap: () {
-                    // منطق إنقاص العدد
-                    setState(() {
-                      if (currentCount > 0) {
+                    if (currentCount > 0) {
+                      setState(() {
                         azkarList[index]['current_count'] = currentCount - 1;
-                      }
-                    });
+                      });
+                    }
                   },
                   child: AnimatedContainer(
-                    duration: Duration(milliseconds: 300),
-                    margin: EdgeInsets.only(bottom: 16),
-                    padding: EdgeInsets.all(16),
+                    duration: const Duration(milliseconds: 300),
+                    margin: const EdgeInsets.only(bottom: 16),
+                    padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
-                      // تغيير اللون إذا انتهى الذكر
                       color: isFinished 
                           ? Colors.green.withOpacity(0.6) 
                           : Colors.white.withOpacity(0.1),
@@ -122,6 +119,9 @@ class _MorningazkarState extends State<Morningazkar> {
                         color: isFinished ? Colors.green : Colors.white.withOpacity(0.3),
                         width: 1,
                       ),
+                      boxShadow: isFinished 
+                          ? [BoxShadow(color: Colors.greenAccent.withOpacity(0.4), blurRadius: 15)]
+                          : [],
                     ),
                     child: Column(
                       children: [
@@ -133,59 +133,75 @@ class _MorningazkarState extends State<Morningazkar> {
                             color: Colors.white,
                             fontSize: 18,
                             height: 1.5,
-                            decoration: isFinished ? TextDecoration.lineThrough : null, // شطب النص عند الانتهاء
+                            decoration: isFinished ? TextDecoration.lineThrough : null,
+                            decorationColor: Colors.white70,
                           ),
                         ),
-                        SizedBox(height: 15),
-                        Divider(color: Colors.white24),
+                        const SizedBox(height: 15),
+                        const Divider(color: Colors.white24),
                         
                         // العداد وشريط التقدم
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            // دائرة العداد
+                            // دائرة العداد (مع انيميشن Pop)
                             Container(
-                              padding: EdgeInsets.all(8),
-                              decoration: BoxDecoration(
+                              padding: const EdgeInsets.all(10),
+                              decoration: const BoxDecoration(
                                 shape: BoxShape.circle,
                                 color: Colors.amber,
                               ),
                               child: Text(
-                                '$currentCount', // عرض العدد المتبقي
-                                style: TextStyle(
+                                '$currentCount', 
+                                style: const TextStyle(
                                   fontWeight: FontWeight.bold,
                                   color: Colors.black,
                                   fontSize: 16
                                 ),
-                              ),
+                              )
+                              .animate(key: ValueKey(currentCount)) // 👈 كلما تبدل الرقم، كيتعاود الانيميشن
+                              .scale(duration: 200.ms, curve: Curves.easeOutBack), 
                             ),
                             
-                            // شريط التقدم (Progress Bar)
+                            // شريط التقدم
                             Expanded(
                               child: Padding(
                                 padding: const EdgeInsets.symmetric(horizontal: 10),
                                 child: ClipRRect(
                                   borderRadius: BorderRadius.circular(10),
-                                  child: LinearProgressIndicator(
-                                    value: isFinished ? 1 : (count - currentCount) / count,
-                                    backgroundColor: Colors.grey.withOpacity(0.3),
-                                    color: Colors.amber,
-                                    minHeight: 8,
+                                  child: TweenAnimationBuilder<double>(
+                                    duration: const Duration(milliseconds: 500),
+                                    curve: Curves.easeOut,
+                                    tween: Tween<double>(
+                                      begin: 0, 
+                                      end: isFinished ? 1 : (count - currentCount) / count
+                                    ),
+                                    builder: (context, value, _) => LinearProgressIndicator(
+                                      value: value,
+                                      backgroundColor: Colors.grey.withOpacity(0.3),
+                                      color: isFinished ? Colors.white : Colors.amber,
+                                      minHeight: 8,
+                                    ),
                                   ),
                                 ),
                               ),
                             ),
                             
-                            // نص توضيحي صغير
+                            // نص التكرار
                             Text(
-                              isFinished ? "تم" : "تكرار: $count",
-                              style: TextStyle(color: Colors.white70),
+                              isFinished ? "تم ✅" : "تكرار: $count",
+                              style: const TextStyle(color: Colors.white70),
                             )
+                            .animate(target: isFinished ? 1 : 0) // إلا سالا، دير هاد الحركة
+                            .shake(hz: 4, curve: Curves.easeInOut), // اهتزاز بسيط للفرحة
                           ],
                         )
                       ],
                     ),
-                  ),
+                  )
+                  .animate() // 👈 هذا هو الانيميشن ديال الدخول
+                  .fade(duration: 500.ms, delay: (100 * index).ms) // كل واحد كيتعطل على لاخور بـ 100ms
+                  .slideX(begin: 0.2, end: 0, curve: Curves.easeOut), 
                 );
               },
             ),
