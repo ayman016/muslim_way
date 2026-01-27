@@ -3,6 +3,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import 'package:muslim_way/providers/language_provider.dart';
+import 'package:muslim_way/notification_service.dart';
 
 class AddTaskPage extends StatefulWidget {
   const AddTaskPage({super.key});
@@ -13,24 +14,67 @@ class AddTaskPage extends StatefulWidget {
 
 class _AddTaskPageState extends State<AddTaskPage> {
   TextEditingController titleController = TextEditingController();
-  String selectedCategoryKey = "cat_personal"; // نسجلو المفتاح دابا
-  bool isDaily = false; // واش عادة يومية
-  DateTime? reminderTime; // وقت التذكير
+  String selectedCategoryKey = "cat_personal";
+  bool isDaily = false;
+  DateTime? reminderTime;
 
-  // قائمة المفاتيح ديال التصنيفات
   final List<String> categoryKeys = [
     "cat_personal", "cat_work", "cat_religion", "cat_study", "cat_shopping"
   ];
 
-  void saveTask() {
-    if (titleController.text.isEmpty) return;
+  // ✅ دالة الحفظ المحسنة
+  void saveTask() async {
+    if (titleController.text.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text("الرجاء إدخال عنوان المهمة", style: GoogleFonts.cairo()),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
     
-    // الهيكلة الجديدة للبيانات:
-    // العنوان | المفتاح | واش يومية | تاريخ الإنشاء | تاريخ التذكير (اختياري)
     String createdAt = DateTime.now().toString();
     String reminderString = reminderTime != null ? reminderTime.toString() : "null";
     
     String newTask = "${titleController.text}|$selectedCategoryKey|$isDaily|$createdAt|$reminderString";
+    
+    // ✅ جدولة الإشعار
+    if (reminderTime != null) {
+      try {
+        final notifId = DateTime.now().millisecondsSinceEpoch ~/ 1000;
+        
+        // ✅ اختبار: إشعار فوري للتأكد
+        await NotificationService().showImmediateNotification(
+          "تم حفظ المهمة ✅",
+          "المهمة: ${titleController.text}",
+        );
+        
+        // ✅ جدولة التذكير
+        await NotificationService().scheduleNotification(
+          id: notifId,
+          title: "تذكير: ${titleController.text}",
+          body: isDaily ? "🔄 عادة يومية" : "📅 مهمة",
+          scheduledTime: reminderTime!,
+        );
+        
+        print("✅ تم ضبط التذكير للمهمة: ${titleController.text}");
+        
+        // حفظ الـ ID
+        newTask = "$newTask|$notifId";
+        
+      } catch (e) {
+        print("❌ فشل ضبط التذكير: $e");
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text("تعذر ضبط التذكير", style: GoogleFonts.cairo()),
+              backgroundColor: Colors.orange,
+            ),
+          );
+        }
+      }
+    }
     
     Navigator.pop(context, newTask); 
   }
@@ -43,7 +87,10 @@ class _AddTaskPageState extends State<AddTaskPage> {
       builder: (context, child) {
         return Theme(
           data: ThemeData.dark().copyWith(
-            colorScheme: const ColorScheme.dark(primary: Colors.amber, surface: Color(0xFF1E1E1E)),
+            colorScheme: const ColorScheme.dark(
+              primary: Colors.amber, 
+              surface: Color(0xFF1E1E1E)
+            ),
           ),
           child: child!,
         );
@@ -53,7 +100,6 @@ class _AddTaskPageState extends State<AddTaskPage> {
     if (picked != null) {
       final now = DateTime.now();
       setState(() {
-        // دمج الوقت المختار مع تاريخ اليوم
         reminderTime = DateTime(now.year, now.month, now.day, picked.hour, picked.minute);
       });
     }
@@ -89,7 +135,7 @@ class _AddTaskPageState extends State<AddTaskPage> {
               ),
               const SizedBox(height: 30),
               
-              // 2. نوع المهمة (يومية / عادية)
+              // 2. نوع المهمة
               Container(
                 padding: const EdgeInsets.all(15),
                 decoration: BoxDecoration(
@@ -98,8 +144,14 @@ class _AddTaskPageState extends State<AddTaskPage> {
                   border: Border.all(color: isDaily ? Colors.amber : Colors.white10),
                 ),
                 child: SwitchListTile(
-                  title: Text(lang.t('daily_habit'), style: GoogleFonts.cairo(color: Colors.white, fontWeight: FontWeight.bold)),
-                  subtitle: Text(isDaily ? "🔄 ${lang.t('daily_habit')}" : "📅 ${lang.t('one_time_task')}", style: TextStyle(color: Colors.grey)),
+                  title: Text(
+                    lang.t('daily_habit'), 
+                    style: GoogleFonts.cairo(color: Colors.white, fontWeight: FontWeight.bold)
+                  ),
+                  subtitle: Text(
+                    isDaily ? "🔄 ${lang.t('daily_habit')}" : "📅 ${lang.t('one_time_task')}", 
+                    style: const TextStyle(color: Colors.grey)
+                  ),
                   activeColor: Colors.amber,
                   value: isDaily,
                   onChanged: (val) => setState(() => isDaily = val),
@@ -107,7 +159,7 @@ class _AddTaskPageState extends State<AddTaskPage> {
               ),
               const SizedBox(height: 20),
 
-              // 3. التذكير (وقت)
+              // 3. التذكير
               GestureDetector(
                 onTap: _pickTime,
                 child: Container(
@@ -124,10 +176,15 @@ class _AddTaskPageState extends State<AddTaskPage> {
                       Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(lang.t('set_reminder'), style: GoogleFonts.cairo(color: Colors.white, fontWeight: FontWeight.bold)),
+                          Text(
+                            lang.t('set_reminder'), 
+                            style: GoogleFonts.cairo(color: Colors.white, fontWeight: FontWeight.bold)
+                          ),
                           if (reminderTime != null)
-                            Text("${lang.t('reminder_set')} ${DateFormat('HH:mm').format(reminderTime!)}", 
-                                 style: const TextStyle(color: Colors.amber, fontSize: 12)),
+                            Text(
+                              "${lang.t('reminder_set')} ${DateFormat('HH:mm').format(reminderTime!)}", 
+                              style: const TextStyle(color: Colors.amber, fontSize: 12)
+                            ),
                         ],
                       ),
                       const Spacer(),
@@ -151,7 +208,10 @@ class _AddTaskPageState extends State<AddTaskPage> {
                 children: categoryKeys.map((catKey) {
                   bool isSelected = selectedCategoryKey == catKey;
                   return ChoiceChip(
-                    label: Text(lang.t(catKey), style: GoogleFonts.cairo(color: isSelected ? Colors.black : Colors.black)),
+                    label: Text(
+                      lang.t(catKey), 
+                      style: GoogleFonts.cairo(color: isSelected ? Colors.black : Colors.black)
+                    ),
                     selected: isSelected,
                     selectedColor: Colors.amber,
                     backgroundColor: Colors.grey.withOpacity(0.2),
@@ -171,9 +231,15 @@ class _AddTaskPageState extends State<AddTaskPage> {
                 width: double.infinity,
                 height: 50,
                 child: ElevatedButton(
-                  style: ElevatedButton.styleFrom(backgroundColor: Colors.amber, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15))),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.amber, 
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15))
+                  ),
                   onPressed: saveTask,
-                  child: Text(lang.t('save'), style: GoogleFonts.cairo(color: Colors.black, fontSize: 18, fontWeight: FontWeight.bold)),
+                  child: Text(
+                    lang.t('save'), 
+                    style: GoogleFonts.cairo(color: Colors.black, fontSize: 18, fontWeight: FontWeight.bold)
+                  ),
                 ),
               )
             ],
