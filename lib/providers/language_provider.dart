@@ -9,7 +9,7 @@ class LanguageProvider with ChangeNotifier {
   final Map<String, Map<String, String>> _localizedValues = {
     // 🇸🇦 العربية
     'ar': {
-      // General
+      // General & App Structure
       'settings_title': 'الإعدادات',
       'home': 'الرئيسية',
       'prayers': 'صلاتي',
@@ -28,7 +28,20 @@ class LanguageProvider with ChangeNotifier {
       'qibla': 'اتجاه القبلة',
       'quran': 'القرآن الكريم',
       
-      // Finance
+      // Finance & Tasks Categories (المفاتيح)
+      'cat_food': 'أكل',
+      'cat_transport': 'مواصلات',
+      'cat_shopping': 'تسوق',
+      'cat_salary': 'راتب',
+      'cat_bills': 'فواتير',
+      'cat_health': 'صحة',
+      'cat_personal': 'شخصي',
+      'cat_work': 'عمل',
+      'cat_religion': 'دين',
+      'cat_study': 'دراسة',
+      'cat_other': 'أخرى',
+
+      // Finance UI
       'current_balance': 'الرصيد الحالي',
       'money_quote': 'المال زينة الحياة الدنيا',
       'add_transaction': 'إضافة معاملة',
@@ -41,12 +54,23 @@ class LanguageProvider with ChangeNotifier {
       'skip': 'تخطي',
       'empty_finance': 'لا توجد معاملات بعد',
       
-      // Notes
+      // Notes & Tasks UI
       'my_tasks': 'مهامي وأفكاري',
       'add_task': 'مهمة جديدة',
+      'task_title_hint': 'ماذا تريد أن تنجز؟',
+      'task_type': 'نوع المهمة',
+      'daily_habit': 'عادة يومية',
+      'one_time_task': 'مهمة مرة واحدة',
+      'set_reminder': 'ضبط تذكير',
+      'reminder_set': 'تم ضبط التذكير على',
       'delete_task_title': 'مسح الملاحظة؟',
       'delete_task_ask': 'هل أنت متأكد أنك تريد حذف هذه المهمة؟',
       'empty_notes': 'لا توجد مهام حالياً',
+      
+      // Time
+      'today': 'اليوم',
+      'yesterday': 'الأمس',
+      'at': 'على الساعة',
     },
     
     // 🇺🇸 English
@@ -69,7 +93,20 @@ class LanguageProvider with ChangeNotifier {
       'qibla': 'Qibla Direction',
       'quran': 'Holy Quran',
       
-      // Finance
+      // Categories
+      'cat_food': 'Food',
+      'cat_transport': 'Transport',
+      'cat_shopping': 'Shopping',
+      'cat_salary': 'Salary',
+      'cat_bills': 'Bills',
+      'cat_health': 'Health',
+      'cat_personal': 'Personal',
+      'cat_work': 'Work',
+      'cat_religion': 'Religion',
+      'cat_study': 'Study',
+      'cat_other': 'Other',
+
+      // Finance UI
       'current_balance': 'Current Balance',
       'money_quote': 'Money is the adornment of life',
       'add_transaction': 'Add Transaction',
@@ -82,12 +119,23 @@ class LanguageProvider with ChangeNotifier {
       'skip': 'Skip',
       'empty_finance': 'No transactions yet',
 
-      // Notes
+      // Notes UI
       'my_tasks': 'My Tasks & Ideas',
       'add_task': 'New Task',
+      'task_title_hint': 'What do you want to do?',
+      'task_type': 'Task Type',
+      'daily_habit': 'Daily Habit',
+      'one_time_task': 'One-time Task',
+      'set_reminder': 'Set Reminder',
+      'reminder_set': 'Reminder set for',
       'delete_task_title': 'Delete Note?',
-      'delete_task_ask': 'Are you sure you want to delete this task?',
+      'delete_task_ask': 'Delete this task?',
       'empty_notes': 'No tasks yet',
+      
+      // Time
+      'today': 'Today',
+      'yesterday': 'Yesterday',
+      'at': 'at',
     },
 
     // 🇫🇷 Français
@@ -110,7 +158,20 @@ class LanguageProvider with ChangeNotifier {
       'qibla': 'Direction Qibla',
       'quran': 'Saint Coran',
       
-      // Finance
+      // Categories
+      'cat_food': 'Nourriture',
+      'cat_transport': 'Transport',
+      'cat_shopping': 'Achats',
+      'cat_salary': 'Salaire',
+      'cat_bills': 'Factures',
+      'cat_health': 'Santé',
+      'cat_personal': 'Personnel',
+      'cat_work': 'Travail',
+      'cat_religion': 'Religion',
+      'cat_study': 'Études',
+      'cat_other': 'Autre',
+      
+      // Finance UI
       'current_balance': 'Solde Actuel',
       'money_quote': 'L\'argent est la parure de la vie',
       'add_transaction': 'Ajouter Transaction',
@@ -123,12 +184,23 @@ class LanguageProvider with ChangeNotifier {
       'skip': 'Passer',
       'empty_finance': 'Aucune transaction',
 
-      // Notes
+      // Notes UI
       'my_tasks': 'Mes Tâches',
       'add_task': 'Nouvelle Tâche',
+      'task_title_hint': 'Que voulez-vous faire ?',
+      'task_type': 'Type de tâche',
+      'daily_habit': 'Habitude Quotidienne',
+      'one_time_task': 'Tâche Unique',
+      'set_reminder': 'Définir un rappel',
+      'reminder_set': 'Rappel défini pour',
       'delete_task_title': 'Supprimer la note ?',
-      'delete_task_ask': 'Êtes-vous sûr de vouloir supprimer ?',
+      'delete_task_ask': 'Supprimer cette tâche ?',
       'empty_notes': 'Aucune tâche',
+      
+      // Time
+      'today': 'Aujourd\'hui',
+      'yesterday': 'Hier',
+      'at': 'à',
     },
 
     // 🇲🇦 الدارجة
@@ -151,7 +223,20 @@ class LanguageProvider with ChangeNotifier {
       'qibla': 'القبلة',
       'quran': 'القرآن',
       
-      // Finance
+      // Categories
+      'cat_food': 'ماكلة',
+      'cat_transport': 'طرقان',
+      'cat_shopping': 'تقضية',
+      'cat_salary': 'مانضة',
+      'cat_bills': 'الماء والضو',
+      'cat_health': 'طبيب',
+      'cat_personal': 'ديالي',
+      'cat_work': 'خدمة',
+      'cat_religion': 'دين',
+      'cat_study': 'قراية',
+      'cat_other': 'شي حاجة أخرى',
+      
+      // Finance UI
       'current_balance': 'شحال عندي',
       'money_quote': 'المال والبنون زينة الحياة',
       'add_transaction': 'زيد شي حاجة',
@@ -164,12 +249,23 @@ class LanguageProvider with ChangeNotifier {
       'skip': 'دوز',
       'empty_finance': 'مازال ما دخلتي والو',
 
-      // Notes
+      // Notes UI
       'my_tasks': 'التقياد والملاحظات',
       'add_task': 'زيد ملاحظة',
+      'task_title_hint': 'شنو باغي دير؟',
+      'task_type': 'نوع المهمة',
+      'daily_habit': 'عادة يومية (ديما)',
+      'one_time_task': 'مهمة مرة وحدة',
+      'set_reminder': 'فكرني فالوقت',
+      'reminder_set': 'غانفكرك مع',
       'delete_task_title': 'تمسح هادي؟',
       'delete_task_ask': 'واش متأكد باغي تمسحها؟',
       'empty_notes': 'ما عندك حتى ملاحظة',
+      
+      // Time
+      'today': 'اليوم',
+      'yesterday': 'البارح',
+      'at': 'مع',
     },
   };
 

@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:provider/provider.dart'; // ✅
+import 'package:provider/provider.dart';
+import 'package:intl/intl.dart'; // ✅ لتنسيق التاريخ
 import 'package:muslim_way/services/firestore_service.dart';
-import 'package:muslim_way/providers/language_provider.dart'; // ✅
+import 'package:muslim_way/providers/language_provider.dart';
 
 class FinancePage extends StatefulWidget {
   const FinancePage({super.key});
@@ -36,14 +37,33 @@ class _FinancePageState extends State<FinancePage> {
         isLoading = false;
       });
       if (balance == 0.0 && transactions.isEmpty) {
-         // تأخير بسيط باش مايطلعش الديالوج قبل ما تبنا الصفحة
          Future.delayed(Duration.zero, () => _showInitialBalanceDialog());
       }
     }
   }
+
+  // ✅ دالة تنسيق التاريخ
+  String _formatDate(String isoString, LanguageProvider lang) {
+    try {
+      DateTime date = DateTime.parse(isoString);
+      final now = DateTime.now();
+      final difference = now.difference(date).inDays;
+      String time = DateFormat('HH:mm').format(date);
+
+      if (difference == 0 && date.day == now.day) {
+        return "${lang.t('today')} $time";
+      } else if (difference == 1 || (difference == 0 && date.day != now.day)) {
+        return "${lang.t('yesterday')} $time";
+      } else {
+        return DateFormat('dd/MM HH:mm').format(date);
+      }
+    } catch (e) {
+      return "";
+    }
+  }
   
   void _showInitialBalanceDialog() {
-    final lang = Provider.of<LanguageProvider>(context, listen: false); // ✅
+    final lang = Provider.of<LanguageProvider>(context, listen: false);
     TextEditingController controller = TextEditingController();
     
     showDialog(
@@ -78,7 +98,7 @@ class _FinancePageState extends State<FinancePage> {
             style: ElevatedButton.styleFrom(backgroundColor: Colors.amber),
             onPressed: () {
               if (controller.text.isNotEmpty) {
-                addTransaction(double.parse(controller.text), true, lang.t('current_balance')); // رصيد أولي
+                addTransaction(double.parse(controller.text), true, "cat_other");
                 Navigator.pop(context);
               }
             }, 
@@ -89,7 +109,7 @@ class _FinancePageState extends State<FinancePage> {
     );
   }
   
-  Future<void> addTransaction(double amount, bool isIncome, String category) async {
+  Future<void> addTransaction(double amount, bool isIncome, String categoryKey) async {
     setState(() {
       if (isIncome) {
         balance += amount;
@@ -97,26 +117,26 @@ class _FinancePageState extends State<FinancePage> {
         balance -= amount;
       }
       String typeSymbol = isIncome ? "+" : "-";
-      // نسجلو التاريخ والوقت
-      transactions.insert(0, "$typeSymbol $amount|$category|${DateTime.now().toString()}");
+      // المبلغ | مفتاح التصنيف | التاريخ
+      transactions.insert(0, "$typeSymbol $amount|$categoryKey|${DateTime.now().toString()}");
     });
     await FirestoreService().updateFinance(balance, transactions);
   }
 
   void showAddTransactionSheet() {
-    final lang = Provider.of<LanguageProvider>(context, listen: false); // ✅
+    final lang = Provider.of<LanguageProvider>(context, listen: false);
     bool isIncome = false;
     TextEditingController amountController = TextEditingController();
-    String selectedCategory = "أخرى";
+    String selectedCategoryKey = "cat_other";
     
-    // هادو ممكن تزيد ليهم الترجمة حتى هما فالمستقبل
+    // قائمة المفاتيح
     final categories = [
-      {'icon': Icons.fastfood, 'name': 'أكل'},
-      {'icon': Icons.directions_bus, 'name': 'مواصلات'},
-      {'icon': Icons.shopping_bag, 'name': 'تسوق'},
-      {'icon': Icons.work, 'name': 'راتب'},
-      {'icon': Icons.lightbulb, 'name': 'فواتير'},
-      {'icon': Icons.health_and_safety, 'name': 'صحة'},
+      {'icon': Icons.fastfood, 'key': 'cat_food'},
+      {'icon': Icons.directions_bus, 'key': 'cat_transport'},
+      {'icon': Icons.shopping_bag, 'key': 'cat_shopping'},
+      {'icon': Icons.work, 'key': 'cat_salary'},
+      {'icon': Icons.lightbulb, 'key': 'cat_bills'},
+      {'icon': Icons.health_and_safety, 'key': 'cat_health'},
     ];
 
     showModalBottomSheet(
@@ -138,6 +158,7 @@ class _FinancePageState extends State<FinancePage> {
                   Container(height: 5, width: 50, color: Colors.grey, margin: const EdgeInsets.only(bottom: 20)),
                   Text(lang.t('add_transaction'), style: GoogleFonts.cairo(color: Colors.white, fontSize: 20)),
                   const SizedBox(height: 20),
+                  // أزرار دخل/مصروف (نفس الكود السابق...)
                   Row(
                     children: [
                       Expanded(
@@ -189,9 +210,10 @@ class _FinancePageState extends State<FinancePage> {
                       gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount: 3, crossAxisSpacing: 10, mainAxisSpacing: 10),
                       itemCount: categories.length,
                       itemBuilder: (context, index) {
-                        bool isSelected = selectedCategory == categories[index]['name'];
+                        String key = categories[index]['key'] as String;
+                        bool isSelected = selectedCategoryKey == key;
                         return GestureDetector(
-                          onTap: () => setModalState(() => selectedCategory = categories[index]['name'] as String),
+                          onTap: () => setModalState(() => selectedCategoryKey = key),
                           child: Container(
                             decoration: BoxDecoration(
                               color: isSelected ? Colors.amber : Colors.grey.withOpacity(0.1),
@@ -201,7 +223,7 @@ class _FinancePageState extends State<FinancePage> {
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: [
                                 Icon(categories[index]['icon'] as IconData, color: isSelected ? Colors.black : Colors.white),
-                                Text(categories[index]['name'] as String, style: GoogleFonts.cairo(color: isSelected ? Colors.black : Colors.white, fontSize: 12)),
+                                Text(lang.t(key), style: GoogleFonts.cairo(color: isSelected ? Colors.black : Colors.white, fontSize: 12)),
                               ],
                             ),
                           ),
@@ -213,7 +235,7 @@ class _FinancePageState extends State<FinancePage> {
                     style: ElevatedButton.styleFrom(backgroundColor: Colors.amber),
                     onPressed: () {
                       if (amountController.text.isNotEmpty) {
-                        addTransaction(double.parse(amountController.text), isIncome, selectedCategory);
+                        addTransaction(double.parse(amountController.text), isIncome, selectedCategoryKey);
                         Navigator.pop(context);
                       }
                     },
@@ -230,7 +252,7 @@ class _FinancePageState extends State<FinancePage> {
 
   @override
   Widget build(BuildContext context) {
-    final lang = Provider.of<LanguageProvider>(context); // ✅ استدعاء المترجم
+    final lang = Provider.of<LanguageProvider>(context);
 
     if (isLoading) {
       return const Scaffold(
@@ -247,7 +269,7 @@ class _FinancePageState extends State<FinancePage> {
           child: Column(
             children: [
               const SizedBox(height: 10),
-              // بطاقة الرصيد
+              // (نفس كود بطاقة الرصيد...)
               Container(
                 margin: const EdgeInsets.all(20),
                 height: 200,
@@ -291,41 +313,36 @@ class _FinancePageState extends State<FinancePage> {
               ),
               
               Expanded(
-                child: transactions.isEmpty 
-                  // ✅ تحسين شكل الـ Empty State
-                  ? Center(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(Icons.receipt_long, size: 70, color: Colors.white.withOpacity(0.2)),
-                          const SizedBox(height: 10),
-                          Text(lang.t('empty_finance'), style: GoogleFonts.cairo(color: Colors.white54)),
-                        ],
-                      ),
-                    )
-                  : ListView.builder(
-                    padding: const EdgeInsets.only(bottom: 100),
-                    itemCount: transactions.length,
-                    itemBuilder: (context, index) {
-                      List<String> data = transactions[index].split('|');
-                      bool isIncome = data[0].contains("+");
-                      return Card(
-                        color: Colors.grey.withOpacity(0.1),
-                        margin: const EdgeInsets.symmetric(horizontal: 15, vertical: 5),
-                        child: ListTile(
-                          leading: Icon(
-                            isIncome ? Icons.arrow_downward : Icons.arrow_upward,
-                            color: isIncome ? Colors.green : Colors.red,
-                          ),
-                          title: Text(data[1], style: GoogleFonts.cairo(color: Colors.white)),
-                          trailing: Text(
-                            data[0],
-                            style: GoogleFonts.cairo(color: isIncome ? Colors.green : Colors.red, fontSize: 18),
-                          ),
+                child: ListView.builder(
+                  padding: const EdgeInsets.only(bottom: 100),
+                  itemCount: transactions.length,
+                  itemBuilder: (context, index) {
+                    List<String> data = transactions[index].split('|');
+                    // حماية البيانات
+                    String amountType = data[0];
+                    String catKey = data.length > 1 ? data[1] : "cat_other";
+                    String dateStr = data.length > 2 ? data[2] : DateTime.now().toString();
+
+                    bool isIncome = amountType.contains("+");
+                    
+                    return Card(
+                      color: Colors.grey.withOpacity(0.1),
+                      margin: const EdgeInsets.symmetric(horizontal: 15, vertical: 5),
+                      child: ListTile(
+                        leading: Icon(
+                          isIncome ? Icons.arrow_downward : Icons.arrow_upward,
+                          color: isIncome ? Colors.green : Colors.red,
                         ),
-                      );
-                    },
-                  ),
+                        title: Text(lang.t(catKey), style: GoogleFonts.cairo(color: Colors.white)), // ✅ الترجمة
+                        subtitle: Text(_formatDate(dateStr, lang), style: const TextStyle(color: Colors.grey, fontSize: 12)), // ✅ التاريخ
+                        trailing: Text(
+                          amountType,
+                          style: GoogleFonts.cairo(color: isIncome ? Colors.green : Colors.red, fontSize: 18),
+                        ),
+                      ),
+                    );
+                  },
+                ),
               )
             ],
           ),

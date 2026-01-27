@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:muslim_way/notification_service.dart';
 import 'package:provider/provider.dart';
 import 'package:muslim_way/auth_service.dart';
 import 'package:muslim_way/auth_wrapper.dart';
@@ -50,6 +51,7 @@ class _SettingsPageState extends State<SettingsPage> {
       ),
       body: Stack(
         children: [
+          
           Positioned.fill(
             child: Opacity(
               opacity: 0.3,
@@ -107,6 +109,16 @@ class _SettingsPageState extends State<SettingsPage> {
                 
                 const Spacer(),
                 Center(child: Text(lang.t('version'), style: GoogleFonts.cairo(color: Colors.grey, fontSize: 12))),
+                // زيد هاد الزر فين ما بغيتي فشي صفحة
+ElevatedButton(
+  onPressed: () async {
+    await NotificationService().showImmediateNotification(
+      "تجربة", 
+      "واش وصلك هاد الإشعار؟"
+    );
+  },
+  child: Text("جرب الإشعار دابا"),
+)
               ],
             ),
           ),
@@ -168,6 +180,7 @@ class _SettingsPageState extends State<SettingsPage> {
               
               const SizedBox(height: 20),
             ],
+
           ),
         );
       },
