@@ -1,0 +1,39 @@
+name: Build Flutter MacOS
+
+on:
+  push:
+    branches: [ "main" ] # أو السمية ديال البرانش اللي خدام عليه
+  workflow_dispatch: # باش تقدر تلانصيه بيدك وقت ما بغيتي
+
+jobs:
+  build:
+    runs-on: macos-latest # هنا GitHub كيخدم بآخر نسخة ديال Mac
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+
+      - name: Enable MacOS Desktop
+        run: flutter config --enable-macos-desktop
+
+      - name: Get Dependencies
+        run: flutter pub get
+
+      - name: Build MacOS App
+        run: flutter build macos --release
+
+      # مهم: كنجمعو التطبيق في ملف Zip حيت .app عبارة عن dossier
+      - name: Compress App
+        run: |
+          cd build/macos/Build/Products/Release
+          zip -r my_app.zip *.app
+
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: macos-release-app
+          path: build/macos/Build/Products/Release/my_app.zip
