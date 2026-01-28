@@ -9,53 +9,18 @@ import 'package:muslim_way/notification_service.dart';
 import 'package:muslim_way/providers/prayer_provider.dart';
 import 'package:muslim_way/providers/language_provider.dart'; 
 
-// ✅ دالة العمل في الخلفية
+// ✅ دالة العمل في الخلفية (محسنة)
 @pragma('vm:entry-point') 
 void callbackDispatcher() {
   Workmanager().executeTask((task, inputData) async {
     try {
-      // جلب الإحداثيات المحفوظة
       final prefs = await SharedPreferences.getInstance();
       final double? lat = prefs.getDouble('lat');
       final double? long = prefs.getDouble('long');
 
       if (lat != null && long != null) {
-        final myCoordinates = Coordinates(lat, long);
-        final params = CalculationMethod.muslim_world_league.getParameters();
-        final prayerTimes = PrayerTimes.today(myCoordinates, params);
-        
-        final currentPrayer = prayerTimes.currentPrayer();
-        
-        // 1. إشعار الصلاة الحالية
-        if (currentPrayer != Prayer.none && currentPrayer != Prayer.sunrise) {
-          final notifService = NotificationService();
-          await notifService.init();
-          
-          await notifService.showImmediateNotification(
-            "حان موعد الصلاة 🕌",
-            "الله أكبر، الله أكبر.. حي على الصلاة",
-          );
-          
-          print("✅ تم إرسال إشعار الصلاة: ${currentPrayer.name}");
-        }
-        
-        // 2. جدولة الصلاة القادمة
-        final nextPrayer = prayerTimes.nextPrayer();
-        final nextPrayerTime = prayerTimes.timeForPrayer(nextPrayer);
-        
-        if (nextPrayerTime != null && nextPrayer != Prayer.sunrise) {
-          final notifService = NotificationService();
-          await notifService.init();
-          
-          await notifService.scheduleNotification(
-            id: nextPrayer.index + 1000,
-            title: "حان موعد الصلاة 🕌",
-            body: "الله أكبر، الله أكبر.. حي على الصلاة",
-            scheduledTime: nextPrayerTime,
-          );
-          
-          print("✅ تم جدولة الصلاة القادمة: ${nextPrayer.name} على ${nextPrayerTime}");
-        }
+        // ✅ جدولة جميع صلوات اليوم
+        await scheduleTodayPrayers(lat, long);
       }
       
       return Future.value(true);
@@ -64,6 +29,65 @@ void callbackDispatcher() {
       return Future.value(false);
     }
   });
+}
+
+// ✅✅ دالة جديدة: جدولة جميع صلوات اليوم
+Future<void> scheduleTodayPrayers(double lat, double long) async {
+  try {
+    final myCoordinates = Coordinates(lat, long);
+    final params = CalculationMethod.muslim_world_league.getParameters();
+    final prayerTimes = PrayerTimes.today(myCoordinates, params);
+    
+    final notifService = NotificationService();
+    await notifService.init();
+    
+    final now = DateTime.now();
+    
+    // قائمة الصلوات (بدون الشروق)
+    final prayers = [
+      Prayer.fajr,
+      Prayer.dhuhr,
+      Prayer.asr,
+      Prayer.maghrib,
+      Prayer.isha,
+    ];
+    
+    int scheduledCount = 0;
+    
+    for (var prayer in prayers) {
+      final prayerTime = prayerTimes.timeForPrayer(prayer);
+      
+      if (prayerTime != null && prayerTime.isAfter(now)) {
+        // ✅ جدولة الصلاة
+        await notifService.scheduleNotification(
+          id: prayer.index + 1000,
+          title: "حان موعد الصلاة 🕌",
+          body: _getPrayerName(prayer),
+          scheduledTime: prayerTime,
+        );
+        
+        scheduledCount++;
+        print("✅ تم جدولة ${_getPrayerName(prayer)} على ${prayerTime.hour}:${prayerTime.minute.toString().padLeft(2, '0')}");
+      }
+    }
+    
+    print("✅ تم جدولة $scheduledCount صلاة لليوم");
+    
+  } catch (e) {
+    print("❌ خطأ في جدولة الصلوات: $e");
+  }
+}
+
+// ✅ دالة مساعدة للحصول على اسم الصلاة
+String _getPrayerName(Prayer prayer) {
+  switch (prayer) {
+    case Prayer.fajr: return "صلاة الفجر - الله أكبر";
+    case Prayer.dhuhr: return "صلاة الظهر - حي على الصلاة";
+    case Prayer.asr: return "صلاة العصر - حي على الفلاح";
+    case Prayer.maghrib: return "صلاة المغرب - الصلاة خير من النوم";
+    case Prayer.isha: return "صلاة العشاء - الله أكبر";
+    default: return "حان موعد الصلاة";
+  }
 }
 
 void main() async {
@@ -82,7 +106,7 @@ void main() async {
   await NotificationService().init();
   print("✅ تم تهيئة خدمة الإشعارات");
   
-  // 3️⃣ طلب أذونات الإشعارات الأساسية
+  // 3️⃣ طلب أذونات الإشعارات
   print("🔄 جاري طلب أذونات الإشعارات...");
   await NotificationService().requestPermissions();
   print("✅ تم طلب أذونات الإشعارات");
@@ -104,13 +128,26 @@ void main() async {
   );
   print("✅ تم إرسال إشعار الاختبار");
 
-  // 6️⃣ Workmanager
+  // ✅✅ 6️⃣ جدولة صلوات اليوم مباشرة عند التشغيل
+  print("🔄 جاري جدولة صلوات اليوم...");
+  final prefs = await SharedPreferences.getInstance();
+  final double? lat = prefs.getDouble('lat');
+  final double? long = prefs.getDouble('long');
+  
+  if (lat != null && long != null) {
+    await scheduleTodayPrayers(lat, long);
+  } else {
+    print("⚠️ لم يتم العثور على الموقع، سيتم الجدولة عند توفره");
+  }
+
+  // 7️⃣ Workmanager - يجدد الجدولة كل يوم
   await Workmanager().initialize(callbackDispatcher, isInDebugMode: false);
   
+  // ✅ كل 6 ساعات بدل 15 دقيقة (توفير للبطارية)
   await Workmanager().registerPeriodicTask(
     "prayerTimeChecker",
     "prayerTimeChecker",
-    frequency: const Duration(minutes: 15),
+    frequency: const Duration(hours: 6), // ✅ تحديث كل 6 ساعات
     constraints: Constraints(
       networkType: NetworkType.notRequired,
       requiresBatteryNotLow: false,
@@ -122,7 +159,7 @@ void main() async {
   
   print("✅ تم تفعيل مراقبة أوقات الصلاة");
   
-  // 7️⃣ اللغة
+  // 8️⃣ اللغة
   final languageProvider = LanguageProvider();
   await languageProvider.loadLanguage();
 
