@@ -4,55 +4,29 @@ import 'package:geolocator/geolocator.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:workmanager/workmanager.dart';
 import 'package:intl/intl.dart';
-import 'package:muslim_way/services/firestore_service.dart'; // ✅ Import ضروري
 
 class PrayerProvider with ChangeNotifier {
-  // المتغيرات (State)
+  // المتغيرات (خاصة بالصلاة والموقع فقط)
   String _nextPrayerName = "--";
   String _nextPrayerTime = "--";
-  String _remainingBudget = "0.00";
   PrayerTimes? _todayPrayerTimes;
   bool _isLoading = false;
 
   // Getters
   String get nextPrayerName => _nextPrayerName;
   String get nextPrayerTime => _nextPrayerTime;
-  String get remainingBudget => _remainingBudget;
   PrayerTimes? get todayPrayerTimes => _todayPrayerTimes;
   bool get isLoading => _isLoading;
 
-  // دالة واحدة كتجمع كلشي
-  Future<void> fetchAllData() async {
+  // دالة جلب بيانات الصلاة
+  Future<void> fetchPrayerData() async {
     _isLoading = true;
-    notifyListeners();
+    notifyListeners(); // نعلمو الواجهة بلي التحميل بدا
 
-    await _loadBudget(); // ✅ تبدلات باش تقرا من السحاب
     await _calculatePrayersAndLocation();
 
     _isLoading = false;
-    notifyListeners();
-  }
-
-  Future<void> refreshBudgetOnly() async {
-    await _loadBudget();
-    notifyListeners();
-  }
-
-  // ✅ دالة التحميل المعدلة (Firebase First)
-  Future<void> _loadBudget() async {
-    try {
-      final data = await FirestoreService().getUserData();
-      if (data != null && data.containsKey('wallet_balance')) {
-        // تحويل الرقم لـ Double
-        double bal = (data['wallet_balance'] as num).toDouble();
-        _remainingBudget = bal.toStringAsFixed(2);
-      } else {
-        _remainingBudget = "0.00";
-      }
-    } catch (e) {
-      // في حالة ماكاينش انترنت، ممكن تخليها 0.00 أو دير كاش
-      print("Error loading budget: $e");
-    }
+    notifyListeners(); // نعلمو الواجهة بلي سالينا
   }
 
   Future<void> _calculatePrayersAndLocation() async {
@@ -60,6 +34,7 @@ class PrayerProvider with ChangeNotifier {
     double? lat = prefs.getDouble('lat');
     double? long = prefs.getDouble('long');
 
+    // 1. إلا ماكانش الموقع مسجل، نجيبوه من GPS
     if (lat == null || long == null) {
       try {
         LocationPermission permission = await Geolocator.checkPermission();
@@ -71,10 +46,15 @@ class PrayerProvider with ChangeNotifier {
         long = position.longitude;
         await prefs.setDouble('lat', lat);
         await prefs.setDouble('long', long);
-      } catch (e) { return; }
+      } catch (e) { 
+        print("❌ Error getting location: $e");
+        return; 
+      }
     }
 
+    // 2. حساب أوقات الصلاة
     if (lat != null && long != null) {
+      // تسجيل العمل فالخلفية (باش يخدم الأذان)
       await Workmanager().registerPeriodicTask(
         "prayer_check_task",
         "checkPrayerTime",
@@ -85,6 +65,7 @@ class PrayerProvider with ChangeNotifier {
       
       final myCoordinates = Coordinates(lat, long);
       final params = CalculationMethod.muslim_world_league.getParameters();
+      params.madhab = Madhab.shafi; // أو hanafi حسب الرغبة
       final prayerTimes = PrayerTimes.today(myCoordinates, params);
 
       _todayPrayerTimes = prayerTimes;
@@ -94,17 +75,19 @@ class PrayerProvider with ChangeNotifier {
         _nextPrayerTime = DateFormat.jm().format(prayerTimes.timeForPrayer(next)!);
         _nextPrayerName = _getPrayerArabicName(next);
       } else {
+        // إلا سالاو صلوات اليوم، الجاي هو الفجر ديال غدا
         _nextPrayerName = "الفجر";
         _nextPrayerTime = DateFormat.jm().format(prayerTimes.fajr);
       }
     }
   }
 
+  // تحديث الموقع يدوياً
   Future<void> forceUpdateLocation() async {
      final prefs = await SharedPreferences.getInstance();
      await prefs.remove('lat'); 
      await prefs.remove('long');
-     await fetchAllData();
+     await fetchPrayerData();
   }
 
   String _getPrayerArabicName(Prayer prayer) {

@@ -9,8 +9,7 @@ import 'package:muslim_way/finance_page.dart';
 import 'package:muslim_way/qiblapart.dart';
 import 'package:muslim_way/home_tab.dart';
 import 'package:muslim_way/notes_page.dart';
-import 'package:muslim_way/prayers_page.dart';
-import 'package:muslim_way/quran_page.dart';
+import 'package:muslim_way/StatsPage.dart';
 import 'package:muslim_way/settings_page.dart';
 import 'package:muslim_way/providers/language_provider.dart';
 import 'package:muslim_way/login_page.dart'; // ✅ تأكد باش تديه لصفحة الدخول
@@ -29,7 +28,7 @@ class _RootState extends State<Root> {
 
   final List<Widget> _pages = [
     const HomeTab(),
-    const PrayersPage(),
+    const StatsPage(),
     const FinancePage(),
     const NotesPage(),
   ];
@@ -100,7 +99,7 @@ class _RootState extends State<Root> {
             width: double.infinity,
             decoration: BoxDecoration(
               image: DecorationImage(
-                image: const AssetImage('assets/images/mainbg.jpg'),
+                image: const AssetImage('assets/images/eveningbg.jpg'),
                 fit: BoxFit.cover,
                 colorFilter: ColorFilter.mode(Colors.black.withOpacity(0.5), BlendMode.darken),
               ),
@@ -267,14 +266,6 @@ class _RootState extends State<Root> {
                       onTap: () {
                         Navigator.pop(context);
                         Navigator.push(context, MaterialPageRoute(builder: (context) => QiblaPage()));
-                      }
-                    ),
-                    _buildDrawerItem(
-                      icon: Icons.menu_book_rounded, 
-                      text: lang.t('quran'), 
-                      onTap: () {
-                        Navigator.pop(context);
-                        Navigator.push(context, MaterialPageRoute(builder: (context) => QuranPage()));
                       }
                     ),
                     const Divider(color: Colors.white10, thickness: 1, indent: 20, endIndent: 20),

@@ -1,4 +1,6 @@
 import 'dart:io';
+import 'package:intl/date_symbol_data_local.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:permission_handler/permission_handler.dart';
@@ -10,8 +12,9 @@ import 'package:muslim_way/auth_wrapper.dart';
 import 'package:muslim_way/notification_service.dart';
 import 'package:muslim_way/providers/prayer_provider.dart';
 import 'package:muslim_way/providers/language_provider.dart'; 
+import 'package:muslim_way/providers/user_data_provider.dart'; // ✅ ضروري جداً
 
-// ✅ دالة العمل في الخلفية (محسنة)
+// ✅ دالة العمل في الخلفية
 @pragma('vm:entry-point') 
 void callbackDispatcher() {
   Workmanager().executeTask((task, inputData) async {
@@ -138,10 +141,15 @@ String _getPrayerName(Prayer prayer) {
 void main() async {
   // ✅ ضروري قبل أي شيء
   WidgetsFlutterBinding.ensureInitialized();
+  await initializeDateFormatting('ar', null);
   
   // 1️⃣ Firebase
   try {
     await Firebase.initializeApp(); 
+    FirebaseFirestore.instance.settings = const Settings(
+      persistenceEnabled: true, // تفعيل التخزين المحلي
+      cacheSizeBytes: Settings.CACHE_SIZE_UNLIMITED,
+    );
     print("✅ Firebase Connected Successfully");
   } catch (e) {
     print("❌ Firebase Error: $e");
@@ -223,12 +231,12 @@ void main() async {
     
     await Workmanager().initialize(
       callbackDispatcher, 
-      isInDebugMode: false  // ✅ false في الإنتاج
+      isInDebugMode: false 
     );
     
     print("✅ تم تهيئة Workmanager بنجاح");
     
-    // ✅ جدولة الصلوات (كل 6 ساعات)
+    // جدولة الصلوات (كل 6 ساعات)
     await Workmanager().registerPeriodicTask(
       "prayerTimeChecker",
       "prayerTimeChecker",
@@ -244,7 +252,7 @@ void main() async {
     
     print("✅ تم جدولة مهمة الصلوات");
     
-    // ✅ جدولة فحص تذكيرات المهام (كل 15 دقيقة)
+    // جدولة فحص تذكيرات المهام (كل 15 دقيقة)
     await Workmanager().registerPeriodicTask(
       "taskRemindersChecker",
       "taskRemindersChecker",
@@ -272,8 +280,10 @@ void main() async {
   runApp(
     MultiProvider(
       providers: [
-        ChangeNotifierProvider(create: (_) => PrayerProvider()),
-        ChangeNotifierProvider(create: (_) => languageProvider), 
+        ChangeNotifierProvider(create: (_) => languageProvider),
+        ChangeNotifierProvider(create: (_) => PrayerProvider()), // ✅ خاص بالصلاة
+        // ✅✅ هذا هو السطر السحري لحل مشكلة الإحصائيات والمالية
+        ChangeNotifierProvider(create: (_) => UserDataProvider()..fetchData()), 
       ],
       child: const MaterialApp(
         debugShowCheckedModeBanner: false,
