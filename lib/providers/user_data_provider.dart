@@ -1,131 +1,183 @@
 import 'package:flutter/material.dart';
 import 'package:muslim_way/services/firestore_service.dart';
 import 'package:intl/intl.dart';
+import 'dart:async';
 
 class UserDataProvider with ChangeNotifier {
   final FirestoreService _firestoreService = FirestoreService();
 
-  // البيانات
-  double salary = 0.0;
-  double balance = 0.0;
-  List<String> tasks = [];
-  List<String> transactions = [];
-  bool isLoading = true;
+  // ✅ البيانات
+  double _salary = 0.0;
+  double _balance = 0.0;
+  List<String> _tasks = [];
+  List<String> _transactions = [];
+  bool _isLoading = false;
+  bool _hasLoadedOnce = false; // 🆕 Cache flag
 
-  // جلب البيانات
-  Future<void> fetchData() async {
-    isLoading = true;
-    notifyListeners(); 
+  // 🆕 Debounce Timer
+  Timer? _debounceTimer;
+  static const Duration _debounceDuration = Duration(milliseconds: 300);
 
-    await _firestoreService.createUserIfNotExists();
-    final data = await _firestoreService.getUserData();
+  // Getters
+  double get salary => _salary;
+  double get balance => _balance;
+  List<String> get tasks => List.unmodifiable(_tasks);
+  List<String> get transactions => List.unmodifiable(_transactions);
+  bool get isLoading => _isLoading;
+  bool get hasData => _hasLoadedOnce;
 
-    if (data != null) {
-      salary = (data['salary_amount'] as num?)?.toDouble() ?? 0.0;
-      balance = (data['wallet_balance'] as num?)?.toDouble() ?? 0.0;
-      tasks = List<String>.from(data['user_tasks'] ?? []);
-      transactions = List<String>.from(data['wallet_transactions'] ?? []);
+  // ✅ Optimized fetch with caching
+  Future<void> fetchData({bool forceRefresh = false}) async {
+    if (_hasLoadedOnce && !forceRefresh) {
+      debugPrint("✅ Data cached, skipping fetch");
+      return;
     }
 
-    isLoading = false;
-    notifyListeners(); 
+    _isLoading = true;
+    _notifyListenersDebounced();
+
+    try {
+      await _firestoreService.createUserIfNotExists();
+      final data = await _firestoreService.getUserData();
+
+      if (data != null) {
+        _salary = (data['salary_amount'] as num?)?.toDouble() ?? 0.0;
+        _balance = (data['wallet_balance'] as num?)?.toDouble() ?? 0.0;
+        _tasks = List<String>.from(data['user_tasks'] ?? []);
+        _transactions = List<String>.from(data['wallet_transactions'] ?? []);
+      }
+
+      _hasLoadedOnce = true;
+    } catch (e) {
+      debugPrint("❌ Fetch error: $e");
+    } finally {
+      _isLoading = false;
+      _notifyListenersDebounced();
+    }
   }
 
-  Future<void> updateSalary(double newSalary) async {
-    salary = newSalary;
+  // 🆕 Debounced notify
+  void _notifyListenersDebounced() {
+    _debounceTimer?.cancel();
+    _debounceTimer = Timer(_debounceDuration, notifyListeners);
+  }
+
+  // ✅ Immediate notify for critical updates
+  void _notifyListenersImmediate() {
+    _debounceTimer?.cancel();
     notifyListeners();
-    await _firestoreService.updateSalary(newSalary);
+  }
+
+  // ==============================
+  // 💰 Finance Management
+  // ==============================
+
+  Future<void> updateSalary(double newSalary) async {
+    if (_salary == newSalary) return;
+
+    _salary = newSalary;
+    _notifyListenersImmediate();
+    
+    unawaited(_firestoreService.updateSalary(newSalary));
   }
 
   Future<void> addTransaction(double amount, bool isIncome, String categoryKey) async {
     if (isIncome) {
-      balance += amount;
-      salary += amount; 
-      _firestoreService.updateSalary(salary);
+      _balance += amount;
+      _salary += amount;
     } else {
-      balance -= amount;
+      _balance -= amount;
     }
+
     String typeSymbol = isIncome ? "+" : "-";
-    String newTrans = "$typeSymbol $amount|$categoryKey|${DateTime.now().toString()}|$balance";
-    transactions.insert(0, newTrans);
-    notifyListeners();
-    await _firestoreService.updateFinance(balance, transactions);
+    String newTrans = "$typeSymbol $amount|$categoryKey|${DateTime.now().toString()}|$_balance";
+    _transactions.insert(0, newTrans);
+
+    _notifyListenersImmediate();
+
+    unawaited(_firestoreService.updateFinance(_balance, _transactions));
+    if (isIncome) unawaited(_firestoreService.updateSalary(_salary));
   }
 
   Future<void> deleteTransaction(int index) async {
-    String transaction = transactions[index];
+    if (index < 0 || index >= _transactions.length) return;
+
+    String transaction = _transactions[index];
     List<String> parts = transaction.split('|');
     String amountStr = parts[0].replaceAll(' ', '');
     double amount = double.tryParse(amountStr.substring(1)) ?? 0.0;
     bool wasIncome = amountStr.startsWith('+');
 
     if (wasIncome) {
-      balance -= amount; 
-      salary -= amount;  
-      _firestoreService.updateSalary(salary);
+      _balance -= amount;
+      _salary -= amount;
     } else {
-      balance += amount; 
+      _balance += amount;
     }
-    transactions.removeAt(index);
-    notifyListeners();
-    await _firestoreService.updateFinance(balance, transactions);
+    _transactions.removeAt(index);
+
+    _notifyListenersImmediate();
+
+    unawaited(_firestoreService.updateFinance(_balance, _transactions));
+    if (wasIncome) unawaited(_firestoreService.updateSalary(_salary));
   }
 
   Future<void> editTransaction(int index, double newAmount, bool newIsIncome, String newCategory) async {
-    await deleteTransaction(index); 
+    await deleteTransaction(index);
     await addTransaction(newAmount, newIsIncome, newCategory);
   }
 
   // ==============================
-  // ✅ إدارة المهام (Tasks Logic)
+  // ✅ Task Management
   // ==============================
 
   Future<void> addTask(String newTaskString) async {
-    tasks.add(newTaskString);
-    notifyListeners();
-    await _firestoreService.updateTasks(tasks);
+    _tasks.add(newTaskString);
+    _notifyListenersImmediate();
+    unawaited(_firestoreService.updateTasks(_tasks));
   }
 
   Future<void> editTask(int index, String updatedTaskString) async {
-    tasks[index] = updatedTaskString;
-    notifyListeners();
-    await _firestoreService.updateTasks(tasks);
+    if (index < 0 || index >= _tasks.length) return;
+    
+    _tasks[index] = updatedTaskString;
+    _notifyListenersImmediate();
+    unawaited(_firestoreService.updateTasks(_tasks));
   }
 
   Future<void> deleteTask(int index) async {
-    tasks.removeAt(index);
-    notifyListeners();
-    await _firestoreService.updateTasks(tasks);
+    if (index < 0 || index >= _tasks.length) return;
+    
+    _tasks.removeAt(index);
+    _notifyListenersImmediate();
+    unawaited(_firestoreService.updateTasks(_tasks));
   }
 
-  // ✅ الدالة الجديدة (Toggle): كتقلب الحالة (تمت ↔️ غير تمت)
   Future<void> toggleTaskStatus(int index) async {
-    String task = tasks[index];
+    if (index < 0 || index >= _tasks.length) return;
+
+    String task = _tasks[index];
     List<String> parts = task.split('|');
     
-    // الهيكلة: Title|Cat|IsDaily|Date|Reminder|NotifId|LastDone
-    while (parts.length <= 6) {
-      parts.add("null");
-    }
+    while (parts.length <= 6) parts.add("null");
 
     String todayStr = DateFormat('yyyy-MM-dd').format(DateTime.now());
-    String lastDone = parts[6];
-
-    if (lastDone == todayStr) {
-      // 🔄 إذا كانت منجزة اليوم، رجعها "null" (إلغاء الإنجاز)
-      parts[6] = "null";
-    } else {
-      // ✅ إذا ماكانتش منجزة، دير ليها تاريخ اليوم
-      parts[6] = todayStr;
-    }
+    parts[6] = (parts[6] == todayStr) ? "null" : todayStr;
     
-    tasks[index] = parts.join('|');
-    notifyListeners(); // تحديث فوري
-    await _firestoreService.updateTasks(tasks);
+    _tasks[index] = parts.join('|');
+    _notifyListenersImmediate();
+    unawaited(_firestoreService.updateTasks(_tasks));
   }
-  
-  // دالة قديمة، ممكن تخليها للاحتياط أو تمسحها
-  Future<void> markTaskAsDone(int index) async {
-      await toggleTaskStatus(index);
+
+  Future<void> markTaskAsDone(int index) => toggleTaskStatus(index);
+
+  @override
+  void dispose() {
+    _debounceTimer?.cancel();
+    super.dispose();
   }
+}
+
+void unawaited(Future<void> future) {
+  future.catchError((e) => debugPrint("⚠️ Background error: $e"));
 }

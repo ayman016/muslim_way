@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:flutter_animate/flutter_animate.dart'; // 👈 ضروري
 
 class Morningazkar extends StatefulWidget {
   const Morningazkar({super.key});
@@ -10,8 +9,8 @@ class Morningazkar extends StatefulWidget {
 }
 
 class _MorningazkarState extends State<Morningazkar> {
-  // قائمة الأذكار
-  List<Map<String, dynamic>> azkarList = [
+  // 🆕 Made final and const for better performance
+  final List<Map<String, dynamic>> azkarList = [
     {
       "text": "اللَّهُمَّ بِكَ أَصْبَحْنَا، وَبِكَ أَمْسَيْنَا، وَبِكَ نَحْيَا، وَبِكَ نَمُوتُ، وَإِلَيْكَ النُّشُورُ",
       "count": 1,
@@ -37,7 +36,7 @@ class _MorningazkarState extends State<Morningazkar> {
       "count": 1,
       "current_count": 1
     },
-     {
+    {
       "text": "بِسْمِ اللَّهِ الَّذِي لَا يَضُرُّ مَعَ اسْمِهِ شَيْءٌ فِي الْأَرْضِ وَلَا فِي السَّمَاءِ وَهُوَ السَّمِيعُ الْعَلِيمُ",
       "count": 3,
       "current_count": 3
@@ -64,12 +63,12 @@ class _MorningazkarState extends State<Morningazkar> {
       ),
       body: Stack(
         children: [
-          // 1. الخلفية
+          // Background
           SizedBox(
             width: double.infinity,
             height: double.infinity,
             child: Image.asset(
-              'assets/images/drawerbg.jpg', 
+              'assets/images/drawerbg.jpg',
               fit: BoxFit.cover,
             ),
           ),
@@ -86,17 +85,19 @@ class _MorningazkarState extends State<Morningazkar> {
             ),
           ),
 
-          // 2. قائمة الأذكار
+          // List
           SafeArea(
             child: ListView.builder(
-              physics: const BouncingScrollPhysics(), // سكرول رطب
+              physics: const BouncingScrollPhysics(),
               padding: const EdgeInsets.all(16),
               itemCount: azkarList.length,
+              // 🆕 Performance boost
+              cacheExtent: 500,
               itemBuilder: (context, index) {
-                int count = azkarList[index]['count'];
-                int currentCount = azkarList[index]['current_count'];
-                String text = azkarList[index]['text'];
-                bool isFinished = currentCount == 0;
+                final count = azkarList[index]['count'] as int;
+                final currentCount = azkarList[index]['current_count'] as int;
+                final text = azkarList[index]['text'] as String;
+                final isFinished = currentCount == 0;
 
                 return GestureDetector(
                   onTap: () {
@@ -111,21 +112,26 @@ class _MorningazkarState extends State<Morningazkar> {
                     margin: const EdgeInsets.only(bottom: 16),
                     padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
-                      color: isFinished 
-                          ? Colors.green.withOpacity(0.6) 
+                      color: isFinished
+                          ? Colors.green.withOpacity(0.6)
                           : Colors.white.withOpacity(0.1),
                       borderRadius: BorderRadius.circular(20),
                       border: Border.all(
                         color: isFinished ? Colors.green : Colors.white.withOpacity(0.3),
                         width: 1,
                       ),
-                      boxShadow: isFinished 
-                          ? [BoxShadow(color: Colors.greenAccent.withOpacity(0.4), blurRadius: 15)]
+                      boxShadow: isFinished
+                          ? [
+                              BoxShadow(
+                                color: Colors.greenAccent.withOpacity(0.4),
+                                blurRadius: 15,
+                              )
+                            ]
                           : [],
                     ),
                     child: Column(
                       children: [
-                        // نص الذكر
+                        // Text
                         Text(
                           text,
                           textAlign: TextAlign.center,
@@ -139,31 +145,30 @@ class _MorningazkarState extends State<Morningazkar> {
                         ),
                         const SizedBox(height: 15),
                         const Divider(color: Colors.white24),
-                        
-                        // العداد وشريط التقدم
+
+                        // Counter and Progress
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            // دائرة العداد (مع انيميشن Pop)
-                            Container(
+                            // Counter
+                            AnimatedContainer(
+                              duration: const Duration(milliseconds: 200),
                               padding: const EdgeInsets.all(10),
                               decoration: const BoxDecoration(
                                 shape: BoxShape.circle,
                                 color: Colors.amber,
                               ),
                               child: Text(
-                                '$currentCount', 
+                                '$currentCount',
                                 style: const TextStyle(
                                   fontWeight: FontWeight.bold,
                                   color: Colors.black,
-                                  fontSize: 16
+                                  fontSize: 16,
                                 ),
-                              )
-                              .animate(key: ValueKey(currentCount)) // 👈 كلما تبدل الرقم، كيتعاود الانيميشن
-                              .scale(duration: 200.ms, curve: Curves.easeOutBack), 
+                              ),
                             ),
-                            
-                            // شريط التقدم
+
+                            // Progress bar
                             Expanded(
                               child: Padding(
                                 padding: const EdgeInsets.symmetric(horizontal: 10),
@@ -173,10 +178,13 @@ class _MorningazkarState extends State<Morningazkar> {
                                     duration: const Duration(milliseconds: 500),
                                     curve: Curves.easeOut,
                                     tween: Tween<double>(
-                                      begin: 0, 
-                                      end: isFinished ? 1 : (count - currentCount) / count
+                                      begin: 0,
+                                      end: isFinished
+                                          ? 1
+                                          : (count - currentCount) / count,
                                     ),
-                                    builder: (context, value, _) => LinearProgressIndicator(
+                                    builder: (context, value, _) =>
+                                        LinearProgressIndicator(
                                       value: value,
                                       backgroundColor: Colors.grey.withOpacity(0.3),
                                       color: isFinished ? Colors.white : Colors.amber,
@@ -186,22 +194,17 @@ class _MorningazkarState extends State<Morningazkar> {
                                 ),
                               ),
                             ),
-                            
-                            // نص التكرار
+
+                            // Status text
                             Text(
                               isFinished ? "تم ✅" : "تكرار: $count",
                               style: const TextStyle(color: Colors.white70),
-                            )
-                            .animate(target: isFinished ? 1 : 0) // إلا سالا، دير هاد الحركة
-                            .shake(hz: 4, curve: Curves.easeInOut), // اهتزاز بسيط للفرحة
+                            ),
                           ],
                         )
                       ],
                     ),
-                  )
-                  .animate() // 👈 هذا هو الانيميشن ديال الدخول
-                  .fade(duration: 500.ms, delay: (100 * index).ms) // كل واحد كيتعطل على لاخور بـ 100ms
-                  .slideX(begin: 0.2, end: 0, curve: Curves.easeOut), 
+                  ),
                 );
               },
             ),
