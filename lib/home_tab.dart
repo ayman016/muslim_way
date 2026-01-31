@@ -54,8 +54,8 @@ class _HomeTabState extends State<HomeTab> {
                 const SizedBox(height: 10),
                 
                 // 2. Budget Header
-                _buildHeader(userProvider)
-                    .animate().fade(duration: 500.ms, delay: 200.ms).slideX(begin: -0.2, end: 0),
+                // _buildHeader(userProvider)
+                //     .animate().fade(duration: 500.ms, delay: 200.ms).slideX(begin: -0.2, end: 0),
                 
                 const SizedBox(height: 10),
                 
@@ -159,16 +159,8 @@ class _HomeTabState extends State<HomeTab> {
             },
           ),
           
-          if (userData.tasks.length > 3)
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20),
-              child: GestureDetector(
-                onTap: () {
-                   // مستقبلاً: فتح صفحة كل المهام
-                },
-                child: Text("عرض المزيد...", style: GoogleFonts.cairo(color: Colors.amber, fontSize: 12)),
-              ),
-            )
+         
+         
       ],
     );
   }
@@ -201,27 +193,27 @@ class _HomeTabState extends State<HomeTab> {
     );
   }
 
-  Widget _buildHeader(UserDataProvider provider) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text("الميزانية المتبقية", style: GoogleFonts.cairo(color: Colors.white70, fontSize: 14)),
-              Text("${provider.balance.toStringAsFixed(2)} DH", style: GoogleFonts.cairo(color: Colors.amber, fontSize: 22, fontWeight: FontWeight.bold)),
-            ],
-          ),
-          IconButton(
-            onPressed: () => provider.fetchData(),
-            icon: const Icon(Icons.refresh, color: Colors.amber)
-          ).animate().rotate(duration: 1.seconds, curve: Curves.easeInOut),
-        ],
-      ),
-    );
-  }
+  // Widget _buildHeader(UserDataProvider provider) {
+  //   return Padding(
+  //     padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
+  //     child: Row(
+  //       mainAxisAlignment: MainAxisAlignment.spaceBetween,
+  //       children: [
+  //         Column(
+  //           crossAxisAlignment: CrossAxisAlignment.start,
+  //           children: [
+  //             Text("الميزانية المتبقية", style: GoogleFonts.cairo(color: Colors.white70, fontSize: 14)),
+  //             Text("${provider.balance.toStringAsFixed(2)} DH", style: GoogleFonts.cairo(color: Colors.amber, fontSize: 22, fontWeight: FontWeight.bold)),
+  //           ],
+  //         ),
+  //         IconButton(
+  //           onPressed: () => provider.fetchData(),
+  //           icon: const Icon(Icons.refresh, color: Colors.amber)
+  //         ).animate().rotate(duration: 1.seconds, curve: Curves.easeInOut),
+  //       ],
+  //     ),
+  //   );
+  // }
 
   // ... (باقي الودجتس PrayerList و Azkar بحال الكود القديم - ما تبدلوش) ...
   // باش ما نعمرش عليك الكود بزاف، خلي دوك الدوال الصغار لي فالتحت كيف ما هوما.

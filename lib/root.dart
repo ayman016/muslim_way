@@ -123,7 +123,7 @@ class _RootState extends State<Root> {
             child: ClipRRect(
               borderRadius: BorderRadius.circular(40),
               child: BackdropFilter(
-                filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+                filter: ImageFilter.blur(sigmaX: 5, sigmaY: 5),
                 child: Container(
                   padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 12),
                   decoration: BoxDecoration(
@@ -131,7 +131,7 @@ class _RootState extends State<Root> {
                     borderRadius: BorderRadius.circular(40),
                     border: Border.all(color: Colors.white.withOpacity(0.1), width: 0.5),
                     boxShadow: [
-                      BoxShadow(color: Colors.black.withOpacity(0.5), blurRadius: 30, offset: const Offset(0, 10))
+                      BoxShadow(color: Colors.green.withOpacity(0.5), blurRadius: 30, offset: const Offset(0, 10))
                     ],
                   ),
                   child: Row(

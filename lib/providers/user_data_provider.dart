@@ -12,7 +12,7 @@ class UserDataProvider with ChangeNotifier {
   List<String> transactions = [];
   bool isLoading = true;
 
-  // جلب البيانات من السيرفر
+  // جلب البيانات
   Future<void> fetchData() async {
     isLoading = true;
     notifyListeners(); 
@@ -31,14 +31,12 @@ class UserDataProvider with ChangeNotifier {
     notifyListeners(); 
   }
 
-  // تحديث الراتب يدوياً
   Future<void> updateSalary(double newSalary) async {
     salary = newSalary;
     notifyListeners();
     await _firestoreService.updateSalary(newSalary);
   }
 
-  // إضافة معاملة (مع Snapshot للرصيد)
   Future<void> addTransaction(double amount, bool isIncome, String categoryKey) async {
     if (isIncome) {
       balance += amount;
@@ -47,24 +45,18 @@ class UserDataProvider with ChangeNotifier {
     } else {
       balance -= amount;
     }
-    
     String typeSymbol = isIncome ? "+" : "-";
-    // المبلغ | التصنيف | التاريخ | الرصيد_بعد_العملية
     String newTrans = "$typeSymbol $amount|$categoryKey|${DateTime.now().toString()}|$balance";
-    
     transactions.insert(0, newTrans);
-    
     notifyListeners();
     await _firestoreService.updateFinance(balance, transactions);
   }
 
-  // حذف معاملة (استرجاع المال)
   Future<void> deleteTransaction(int index) async {
     String transaction = transactions[index];
     List<String> parts = transaction.split('|');
     String amountStr = parts[0].replaceAll(' ', '');
     double amount = double.tryParse(amountStr.substring(1)) ?? 0.0;
-    
     bool wasIncome = amountStr.startsWith('+');
 
     if (wasIncome) {
@@ -74,14 +66,11 @@ class UserDataProvider with ChangeNotifier {
     } else {
       balance += amount; 
     }
-
     transactions.removeAt(index);
-    
     notifyListeners();
     await _firestoreService.updateFinance(balance, transactions);
   }
 
-  // تعديل معاملة
   Future<void> editTransaction(int index, double newAmount, bool newIsIncome, String newCategory) async {
     await deleteTransaction(index); 
     await addTransaction(newAmount, newIsIncome, newCategory);
@@ -91,46 +80,52 @@ class UserDataProvider with ChangeNotifier {
   // ✅ إدارة المهام (Tasks Logic)
   // ==============================
 
-  // 1. إضافة مهمة جديدة
   Future<void> addTask(String newTaskString) async {
     tasks.add(newTaskString);
-    notifyListeners(); // ✅ هذا هو السر لتحديث الإحصائيات فوراً
+    notifyListeners();
     await _firestoreService.updateTasks(tasks);
   }
 
-  // 2. تعديل مهمة
   Future<void> editTask(int index, String updatedTaskString) async {
     tasks[index] = updatedTaskString;
     notifyListeners();
     await _firestoreService.updateTasks(tasks);
   }
 
-  // 3. حذف مهمة
   Future<void> deleteTask(int index) async {
     tasks.removeAt(index);
     notifyListeners();
     await _firestoreService.updateTasks(tasks);
   }
 
-  // 4. ✅ وضع علامة "تمت" على المهمة
-  Future<void> markTaskAsDone(int index) async {
+  // ✅ الدالة الجديدة (Toggle): كتقلب الحالة (تمت ↔️ غير تمت)
+  Future<void> toggleTaskStatus(int index) async {
     String task = tasks[index];
     List<String> parts = task.split('|');
     
     // الهيكلة: Title|Cat|IsDaily|Date|Reminder|NotifId|LastDone
-    // Index 6 هو LastDone (تاريخ آخر إنجاز)
-    
-    // إذا كانت البيانات قديمة وناقصة، نكملوها
     while (parts.length <= 6) {
       parts.add("null");
     }
 
-    // تحديث التاريخ لليوم
-    parts[6] = DateFormat('yyyy-MM-dd').format(DateTime.now());
+    String todayStr = DateFormat('yyyy-MM-dd').format(DateTime.now());
+    String lastDone = parts[6];
+
+    if (lastDone == todayStr) {
+      // 🔄 إذا كانت منجزة اليوم، رجعها "null" (إلغاء الإنجاز)
+      parts[6] = "null";
+    } else {
+      // ✅ إذا ماكانتش منجزة، دير ليها تاريخ اليوم
+      parts[6] = todayStr;
+    }
     
     tasks[index] = parts.join('|');
-    
-    notifyListeners(); // ✅ تحديث StatsPage فوراً
+    notifyListeners(); // تحديث فوري
     await _firestoreService.updateTasks(tasks);
+  }
+  
+  // دالة قديمة، ممكن تخليها للاحتياط أو تمسحها
+  Future<void> markTaskAsDone(int index) async {
+      await toggleTaskStatus(index);
   }
 }

@@ -1,3 +1,4 @@
+import 'package:awesome_dialog/awesome_dialog.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
@@ -93,7 +94,7 @@ class _AddTaskPageState extends State<AddTaskPage> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text("✅ تم إنجاز المهمة!", style: GoogleFonts.cairo()), backgroundColor: Colors.green)
         );
-        Navigator.pop(context);
+        // Navigator.pop(context);
       }
     }
   }
@@ -120,7 +121,31 @@ class _AddTaskPageState extends State<AddTaskPage> {
         iconTheme: const IconThemeData(color: Colors.amber),
         actions: [
           if (widget.taskIndex != null)
-            IconButton(icon: const Icon(Icons.delete, color: Colors.red), onPressed: () { Provider.of<UserDataProvider>(context, listen: false).deleteTask(widget.taskIndex!); Navigator.pop(context); })
+          IconButton(
+  icon: const Icon(Icons.delete, color: Colors.red),
+  onPressed: () {
+    // ✅ بلاصت المسح المباشر، كنعيطو للـ Dialog
+    AwesomeDialog(
+      context: context,
+      dialogType: DialogType.warning, // نوع التحذير (صفر/برتقالي)
+      animType: AnimType.rightSlide,
+      title: 'تأكيد الحذف',
+      desc: 'هل أنت متأكد من حذف هذه المهمة نهائياً؟',
+      btnCancelText: 'إلغاء',
+      btnOkText: 'حذف',
+      btnOkColor: Colors.red, // لون زر الحذف أحمر
+      btnCancelOnPress: () {
+        // ما دير والو، غير سد الـ Dialog
+      },
+      btnOkOnPress: () {
+        // ✅ هنا فين كيمسح بصح
+        Provider.of<UserDataProvider>(context, listen: false).deleteTask(widget.taskIndex!);
+        Navigator.pop(context); // كيرجع للصفحة السابقة (NotesPage)
+      },
+    ).show();
+  },
+)
+            // IconButton(icon: const Icon(Icons.delete, color: Colors.red), onPressed: () { Provider.of<UserDataProvider>(context, listen: false).deleteTask(widget.taskIndex!); Navigator.pop(context); })
         ],
       ),
       body: SingleChildScrollView(
