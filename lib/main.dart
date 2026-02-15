@@ -173,11 +173,10 @@ void main() async {
     debugPrint("❌ Prayer init error: $e");
   }
 
-  // 5️⃣ Workmanager (🆕 Reduced frequency)
+  // 5️⃣ Workmanager
   try {
     await Workmanager().initialize(callbackDispatcher, isInDebugMode: false);
 
-    // 🆕 Prayer check: Every 6 hours (was 15 min)
     await Workmanager().registerPeriodicTask(
       "prayerTimeChecker",
       "prayerTimeChecker",
@@ -189,7 +188,6 @@ void main() async {
       ),
     );
 
-    // 🆕 Task reminders: Every 30 minutes (was 15 min)
     await Workmanager().registerPeriodicTask(
       "taskRemindersChecker",
       "taskRemindersChecker",

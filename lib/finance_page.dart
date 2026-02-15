@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import 'package:muslim_way/providers/language_provider.dart';
 import 'package:muslim_way/providers/user_data_provider.dart';
+import 'package:muslim_way/theme/app_colors.dart';
 
 class FinancePage extends StatefulWidget {
   const FinancePage({super.key});
@@ -15,20 +16,130 @@ class FinancePage extends StatefulWidget {
 class _FinancePageState extends State<FinancePage> with AutomaticKeepAliveClientMixin {
   
   @override
-  bool get wantKeepAlive => true; // 🆕 Keep state
+  bool get wantKeepAlive => true; 
 
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
       final provider = context.read<UserDataProvider>();
-      if (provider.balance == 0 && provider.salary == 0 && !provider.isLoading) {
-        _showInitialBalanceDialog();
+      await provider.fetchData();
+
+      if (provider.salary == 0 && 
+          provider.balance == 0 && 
+          provider.transactions.isEmpty &&
+          !provider.isLoading) {
+        if (mounted) _showInitialBalanceDialog();
       }
     });
   }
 
-  // 🆕 Optimized grouping with memoization
+  // ✅ دالة حوار تعديل الرصيد (Settings)
+  void _editSalaryDialog() {
+    final lang = context.read<LanguageProvider>();
+    final provider = context.read<UserDataProvider>(); 
+    
+    // 🔥 التغيير: كنعمرو الخانة بـ الرصيد الحالي (Balance) باش ما يوقعش اختلاف
+    final controller = TextEditingController(
+      text: provider.balance > 0 ? provider.balance.toStringAsFixed(0) : "",
+    );
+    
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: AppColors.surface,
+        title: Text("تعديل الرصيد الحالي", style: const TextStyle(color: AppColors.primary)),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text("سيتم تحديث رصيدك وراتبك لهذه القيمة.", style: TextStyle(color: Colors.grey[400], fontSize: 12)),
+            const SizedBox(height: 10),
+            TextField(
+              controller: controller,
+              keyboardType: TextInputType.number,
+              style: const TextStyle(color: Colors.white),
+              decoration: const InputDecoration(
+                hintText: "0.00",
+                hintStyle: TextStyle(color: Colors.grey),
+                enabledBorder: UnderlineInputBorder(borderSide: BorderSide(color: AppColors.primary)),
+                focusedBorder: UnderlineInputBorder(borderSide: BorderSide(color: AppColors.accent, width: 2)),
+                suffixText: "DH",
+                suffixStyle: TextStyle(color: AppColors.accent)
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: Text(lang.t('cancel'), style: const TextStyle(color: Colors.grey)),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary),
+            onPressed: () async {
+              if (controller.text.isNotEmpty) {
+                double newAmount = double.parse(controller.text);
+                
+                // ✅ فاش كدير Save، Provider غايحدث الرصيد والراتب بجوج لنفس القيمة
+                await provider.updateSalary(newAmount);
+                
+                Navigator.pop(ctx);
+                
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text("✅ تم تحديث الرصيد بنجاح", style: GoogleFonts.cairo()), backgroundColor: Colors.green)
+                  );
+                }
+              }
+            },
+            child: Text(lang.t('save'), style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+          )
+        ],
+      ),
+    );
+  }
+
+  void _showInitialBalanceDialog() {
+    final lang = context.read<LanguageProvider>();
+    final controller = TextEditingController();
+    
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: AppColors.surface,
+        title: Text(lang.t('start_balance_ask'), style: const TextStyle(color: AppColors.primary)),
+        content: TextField(
+          controller: controller,
+          keyboardType: TextInputType.number,
+          style: const TextStyle(color: Colors.white),
+          decoration: const InputDecoration(
+            hintText: "مثلاً: 5000",
+            hintStyle: TextStyle(color: Colors.grey),
+            enabledBorder: UnderlineInputBorder(borderSide: BorderSide(color: AppColors.primary)),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: Text(lang.t('skip'), style: const TextStyle(color: Colors.grey)),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary),
+            onPressed: () {
+              if (controller.text.isNotEmpty) {
+                final amount = double.parse(controller.text);
+                context.read<UserDataProvider>().updateSalary(amount); // نستعمل updateSalary لتحديث الاثنين
+                Navigator.pop(ctx);
+              }
+            },
+            child: Text(lang.t('start'), style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+          )
+        ],
+      ),
+    );
+  }
+
   Map<String, List<String>> _groupTransactionsByMonth(List<String> transactions) {
     final grouped = <String, List<String>>{};
     for (var trans in transactions) {
@@ -58,103 +169,19 @@ class _FinancePageState extends State<FinancePage> with AutomaticKeepAliveClient
     }
     return income - expense;
   }
-
-  void _showInitialBalanceDialog() {
-    final lang = context.read<LanguageProvider>();
-    final controller = TextEditingController();
-    
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: Colors.grey.shade900,
-        title: Text("بكم تريد بدأ الشهر؟", style: GoogleFonts.cairo(color: Colors.amber)),
-        content: TextField(
-          controller: controller,
-          keyboardType: TextInputType.number,
-          style: const TextStyle(color: Colors.white),
-          decoration: const InputDecoration(
-            hintText: "مثلاً: 5000",
-            hintStyle: TextStyle(color: Colors.grey),
-            enabledBorder: UnderlineInputBorder(borderSide: BorderSide(color: Colors.amber)),
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: Text(lang.t('skip'), style: const TextStyle(color: Colors.grey)),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.amber),
-            onPressed: () {
-              if (controller.text.isNotEmpty) {
-                final amount = double.parse(controller.text);
-                context.read<UserDataProvider>().addTransaction(amount, true, "cat_salary");
-                Navigator.pop(ctx);
-              }
-            },
-            child: Text(
-              lang.t('start'),
-              style: const TextStyle(color: Colors.black, fontWeight: FontWeight.bold),
-            ),
-          )
-        ],
-      ),
-    );
-  }
-
-  void _editSalaryDialog() {
-    final provider = context.read<UserDataProvider>();
-    final controller = TextEditingController(
-      text: provider.salary > 0 ? provider.salary.toStringAsFixed(0) : "",
-    );
-    
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: Colors.grey.shade900,
-        title: Text("تعديل الدخل الشهري", style: GoogleFonts.cairo(color: Colors.amber)),
-        content: TextField(
-          controller: controller,
-          keyboardType: TextInputType.number,
-          style: const TextStyle(color: Colors.white),
-          decoration: const InputDecoration(
-            hintText: "0.00",
-            hintStyle: TextStyle(color: Colors.grey),
-            enabledBorder: UnderlineInputBorder(borderSide: BorderSide(color: Colors.amber)),
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text("إلغاء", style: TextStyle(color: Colors.grey)),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.amber),
-            onPressed: () {
-              if (controller.text.isNotEmpty) {
-                provider.updateSalary(double.parse(controller.text));
-                Navigator.pop(ctx);
-              }
-            },
-            child: const Text("تحديث", style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold)),
-          )
-        ],
-      ),
-    );
-  }
-
+  
   void _showTransactionOptions(int originalIndex, String transactionData) {
+    final lang = context.read<LanguageProvider>();
     showModalBottomSheet(
       context: context,
-      backgroundColor: Colors.grey.shade900,
+      backgroundColor: AppColors.surface,
       builder: (ctx) => SizedBox(
         height: 200,
         child: Column(
           children: [
             ListTile(
-              leading: const Icon(Icons.edit, color: Colors.blueAccent),
-              title: Text("تعديل المعاملة", style: GoogleFonts.cairo(color: Colors.white)),
+              leading: const Icon(Icons.edit, color: AppColors.primary),
+              title: Text(lang.t('save'), style: const TextStyle(color: Colors.white)),
               onTap: () {
                 Navigator.pop(ctx);
                 showAddTransactionSheet(editIndex: originalIndex, editData: transactionData);
@@ -162,23 +189,23 @@ class _FinancePageState extends State<FinancePage> with AutomaticKeepAliveClient
             ),
             ListTile(
               leading: const Icon(Icons.delete, color: Colors.redAccent),
-              title: Text("حذف المعاملة", style: GoogleFonts.cairo(color: Colors.white)),
+              title: Text(lang.t('delete'), style: const TextStyle(color: Colors.white)),
               onTap: () {
                 Navigator.pop(ctx);
                 showDialog(
                   context: context,
                   builder: (ctx2) => AlertDialog(
-                    backgroundColor: Colors.grey.shade900,
-                    title: Text("تأكيد الحذف", style: GoogleFonts.cairo(color: Colors.white)),
-                    content: Text("سيتم استرجاع المبلغ.", style: GoogleFonts.cairo(color: Colors.white70)),
+                    backgroundColor: AppColors.surface,
+                    title: Text(lang.t('delete'), style: const TextStyle(color: Colors.white)),
+                    content: Text(lang.t('delete_task_ask'), style: const TextStyle(color: Colors.white70)),
                     actions: [
-                      TextButton(onPressed: () => Navigator.pop(ctx2), child: const Text("إلغاء")),
+                      TextButton(onPressed: () => Navigator.pop(ctx2), child: Text(lang.t('cancel'))),
                       TextButton(
                         onPressed: () {
                           context.read<UserDataProvider>().deleteTransaction(originalIndex);
                           Navigator.pop(ctx2);
                         },
-                        child: const Text("حذف", style: TextStyle(color: Colors.red)),
+                        child: Text(lang.t('delete'), style: const TextStyle(color: Colors.red)),
                       ),
                     ],
                   ),
@@ -193,7 +220,6 @@ class _FinancePageState extends State<FinancePage> with AutomaticKeepAliveClient
 
   void showAddTransactionSheet({int? editIndex, String? editData}) {
     final lang = context.read<LanguageProvider>();
-    
     bool isIncome = false;
     final amountController = TextEditingController();
     String selectedCategoryKey = "cat_other";
@@ -223,23 +249,16 @@ class _FinancePageState extends State<FinancePage> with AutomaticKeepAliveClient
         builder: (ctx, setModalState) => Container(
           height: 600,
           decoration: const BoxDecoration(
-            color: Color(0xFF1E1E1E),
+            color: AppColors.background,
             borderRadius: BorderRadius.vertical(top: Radius.circular(30)),
           ),
           padding: const EdgeInsets.all(20),
           child: Column(
             children: [
-              Container(
-                height: 5,
-                width: 50,
-                color: Colors.grey,
-                margin: const EdgeInsets.only(bottom: 20),
-              ),
-              Text(
-                editIndex != null ? "تعديل" : lang.t('add_transaction'),
-                style: GoogleFonts.cairo(color: Colors.white, fontSize: 20),
-              ),
+              Container(height: 5, width: 50, color: Colors.grey, margin: const EdgeInsets.only(bottom: 20)),
+              Text(editIndex != null ? lang.t('save') : lang.t('add_transaction'), style: const TextStyle(color: Colors.white, fontSize: 20)),
               const SizedBox(height: 20),
+              
               Row(
                 children: [
                   Expanded(
@@ -252,12 +271,7 @@ class _FinancePageState extends State<FinancePage> with AutomaticKeepAliveClient
                           border: Border.all(color: Colors.red),
                           borderRadius: BorderRadius.circular(10),
                         ),
-                        child: Center(
-                          child: Text(
-                            lang.t('expense'),
-                            style: GoogleFonts.cairo(color: Colors.red),
-                          ),
-                        ),
+                        child: Center(child: Text(lang.t('expense'), style: const TextStyle(color: Colors.red))),
                       ),
                     ),
                   ),
@@ -272,12 +286,7 @@ class _FinancePageState extends State<FinancePage> with AutomaticKeepAliveClient
                           border: Border.all(color: Colors.green),
                           borderRadius: BorderRadius.circular(10),
                         ),
-                        child: Center(
-                          child: Text(
-                            lang.t('income'),
-                            style: GoogleFonts.cairo(color: Colors.green),
-                          ),
-                        ),
+                        child: Center(child: Text(lang.t('income'), style: const TextStyle(color: Colors.green))),
                       ),
                     ),
                   ),
@@ -298,11 +307,7 @@ class _FinancePageState extends State<FinancePage> with AutomaticKeepAliveClient
               const SizedBox(height: 20),
               Expanded(
                 child: GridView.builder(
-                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                    crossAxisCount: 3,
-                    crossAxisSpacing: 10,
-                    mainAxisSpacing: 10,
-                  ),
+                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount: 3, crossAxisSpacing: 10, mainAxisSpacing: 10),
                   itemCount: categories.length,
                   itemBuilder: (context, index) {
                     final key = categories[index]['key'] as String;
@@ -311,23 +316,14 @@ class _FinancePageState extends State<FinancePage> with AutomaticKeepAliveClient
                       onTap: () => setModalState(() => selectedCategoryKey = key),
                       child: Container(
                         decoration: BoxDecoration(
-                          color: isSelected ? Colors.amber : Colors.grey.withOpacity(0.1),
+                          color: isSelected ? AppColors.accent : AppColors.surface,
                           borderRadius: BorderRadius.circular(15),
                         ),
                         child: Column(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            Icon(
-                              categories[index]['icon'] as IconData,
-                              color: isSelected ? Colors.black : Colors.white,
-                            ),
-                            Text(
-                              lang.t(key),
-                              style: GoogleFonts.cairo(
-                                color: isSelected ? Colors.black : Colors.white,
-                                fontSize: 12,
-                              ),
-                            ),
+                            Icon(categories[index]['icon'] as IconData, color: isSelected ? Colors.black : Colors.white),
+                            Text(lang.t(key), style: TextStyle(color: isSelected ? Colors.black : Colors.white, fontSize: 12)),
                           ],
                         ),
                       ),
@@ -339,23 +335,17 @@ class _FinancePageState extends State<FinancePage> with AutomaticKeepAliveClient
                 width: double.infinity,
                 height: 50,
                 child: ElevatedButton(
-                  style: ElevatedButton.styleFrom(backgroundColor: Colors.amber),
+                  style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary),
                   onPressed: () {
                     if (amountController.text.isNotEmpty) {
                       final amount = double.parse(amountController.text);
                       final provider = context.read<UserDataProvider>();
-                      if (editIndex != null) {
-                        provider.editTransaction(editIndex, amount, isIncome, selectedCategoryKey);
-                      } else {
-                        provider.addTransaction(amount, isIncome, selectedCategoryKey);
-                      }
+                      if (editIndex != null) provider.editTransaction(editIndex, amount, isIncome, selectedCategoryKey);
+                      else provider.addTransaction(amount, isIncome, selectedCategoryKey);
                       Navigator.pop(context);
                     }
                   },
-                  child: Text(
-                    lang.t('save'),
-                    style: GoogleFonts.cairo(color: Colors.black, fontWeight: FontWeight.bold),
-                  ),
+                  child: Text(lang.t('save'), style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
                 ),
               ),
             ],
@@ -376,8 +366,7 @@ class _FinancePageState extends State<FinancePage> with AutomaticKeepAliveClient
 
   @override
   Widget build(BuildContext context) {
-    super.build(context); // Required for AutomaticKeepAliveClientMixin
-    
+    super.build(context);
     final lang = context.watch<LanguageProvider>();
 
     return Scaffold(
@@ -387,26 +376,20 @@ class _FinancePageState extends State<FinancePage> with AutomaticKeepAliveClient
           padding: const EdgeInsets.only(top: 80),
           child: Column(
             children: [
-              // Balance Card
-              Selector<UserDataProvider, double>(
-                selector: (_, provider) => provider.balance,
-                builder: (context, balance, child) => Container(
+              Consumer<UserDataProvider>(
+                builder: (context, provider, child) => Container(
                   margin: const EdgeInsets.all(20),
                   height: 160,
                   width: double.infinity,
                   decoration: BoxDecoration(
-                    gradient: const LinearGradient(
-                      colors: [Color(0xFFFFD700), Color(0xFFB8860B)],
+                    gradient: LinearGradient(
+                      colors: [AppColors.primary, AppColors.primary.withOpacity(0.7)],
                       begin: Alignment.topLeft,
                       end: Alignment.bottomRight,
                     ),
                     borderRadius: BorderRadius.circular(25),
                     boxShadow: [
-                      BoxShadow(
-                        color: Colors.amber.withOpacity(0.3),
-                        blurRadius: 20,
-                        offset: const Offset(0, 10),
-                      )
+                      BoxShadow(color: AppColors.primary.withOpacity(0.3), blurRadius: 20, offset: const Offset(0, 10))
                     ],
                   ),
                   child: Stack(
@@ -417,15 +400,11 @@ class _FinancePageState extends State<FinancePage> with AutomaticKeepAliveClient
                           children: [
                             Text(
                               lang.t('current_balance'),
-                              style: GoogleFonts.cairo(color: Colors.black54, fontSize: 18),
+                              style: const TextStyle(color: Colors.white70, fontSize: 18),
                             ),
                             Text(
-                              "${balance.toStringAsFixed(2)} DH",
-                              style: GoogleFonts.cairo(
-                                color: Colors.black,
-                                fontSize: 40,
-                                fontWeight: FontWeight.bold,
-                              ),
+                              "${provider.balance.toStringAsFixed(2)} DH",
+                              style: const TextStyle(color: Colors.white, fontSize: 40, fontWeight: FontWeight.bold),
                             ),
                           ],
                         ),
@@ -434,9 +413,9 @@ class _FinancePageState extends State<FinancePage> with AutomaticKeepAliveClient
                         top: 10,
                         left: 10,
                         child: IconButton(
-                          icon: const Icon(Icons.settings, color: Colors.black45),
-                          onPressed: _editSalaryDialog,
-                          tooltip: "تغيير الدخل الشهري",
+                          icon: const Icon(Icons.settings, color: Colors.white54),
+                          onPressed: _editSalaryDialog, // ✅
+                          tooltip: lang.t('cat_salary'),
                         ),
                       ),
                     ],
@@ -451,68 +430,58 @@ class _FinancePageState extends State<FinancePage> with AutomaticKeepAliveClient
                   children: [
                     IconButton(
                       onPressed: () => showAddTransactionSheet(),
-                      icon: const Icon(Icons.add_circle, color: Colors.amber, size: 30),
+                      icon: const Icon(Icons.add_circle, color: AppColors.accent, size: 30),
                     ),
                     Text(
                       lang.t('recent_transactions'),
-                      style: GoogleFonts.cairo(color: Colors.white, fontSize: 20),
+                      style: const TextStyle(color: Colors.white, fontSize: 20),
                     ),
                   ],
                 ),
               ),
               
-              // 🆕 Optimized transaction list
               Expanded(
-                child: Selector<UserDataProvider, List<String>>(
-                  selector: (_, provider) => provider.transactions,
-                  builder: (context, transactions, child) {
-                    final grouped = _groupTransactionsByMonth(transactions);
+                child: Consumer<UserDataProvider>(
+                  builder: (context, provider, child) {
+                    final grouped = _groupTransactionsByMonth(provider.transactions);
                     final monthKeys = grouped.keys.toList();
 
                     return ListView.builder(
                       padding: const EdgeInsets.only(bottom: 100),
                       itemCount: monthKeys.length,
-                      // 🆕 Performance boost
                       cacheExtent: 500,
                       itemBuilder: (context, sectionIndex) {
                         final monthKey = monthKeys[sectionIndex];
                         final monthTrans = grouped[monthKey]!;
                         final monthlySavings = _calculateMonthlySavings(monthTrans);
-                        final monthName = DateFormat('MMMM yyyy', 'ar').format(
+                        final monthName = DateFormat('MMMM yyyy', lang.currentLang).format(
                           DateFormat('yyyy-MM').parse(monthKey),
                         );
 
                         return Column(
                           children: [
-                            // Month header
                             Container(
                               margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
                               padding: const EdgeInsets.all(15),
                               decoration: BoxDecoration(
-                                color: Colors.white.withOpacity(0.08),
+                                color: AppColors.surface,
                                 borderRadius: BorderRadius.circular(15),
-                                border: Border.all(color: Colors.amber.withOpacity(0.3)),
+                                border: Border.all(color: AppColors.primary.withOpacity(0.3)),
                               ),
                               child: Row(
                                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                 children: [
                                   Text(
                                     "📅 $monthName",
-                                    style: GoogleFonts.cairo(
-                                      color: Colors.amber,
-                                      fontWeight: FontWeight.bold,
-                                    ),
+                                    style: const TextStyle(color: AppColors.primary, fontWeight: FontWeight.bold),
                                   ),
                                   Column(
                                     crossAxisAlignment: CrossAxisAlignment.end,
                                     children: [
-                                      Text(
-                                        "المتبقي:",
-                                        style: GoogleFonts.cairo(color: Colors.grey, fontSize: 10),
-                                      ),
+                                      Text(lang.t('budget_spent') + ":", style: const TextStyle(color: Colors.grey, fontSize: 10)),
                                       Text(
                                         "${monthlySavings > 0 ? '+' : ''}${monthlySavings.toStringAsFixed(0)} DH",
-                                        style: GoogleFonts.cairo(
+                                        style: TextStyle(
                                           color: monthlySavings >= 0 ? Colors.green : Colors.red,
                                           fontWeight: FontWeight.bold,
                                         ),
@@ -522,50 +491,38 @@ class _FinancePageState extends State<FinancePage> with AutomaticKeepAliveClient
                                 ],
                               ),
                             ),
-                            // Transactions
+                            
                             ...monthTrans.map((transData) {
-                              final originalIndex = transactions.indexOf(transData);
                               final parts = transData.split('|');
                               final amountType = parts[0];
                               final catKey = parts.length > 1 ? parts[1] : "cat_other";
                               final dateStr = parts.length > 2 ? parts[2] : "";
                               final snapshot = parts.length > 3 ? parts[3] : "--";
                               final isIncome = amountType.contains("+");
+                              final originalIndex = provider.transactions.indexOf(transData);
 
                               return GestureDetector(
                                 onLongPress: () => _showTransactionOptions(originalIndex, transData),
                                 child: Card(
-                                  color: Colors.grey.withOpacity(0.1),
+                                  color: AppColors.surface.withOpacity(0.5),
                                   margin: const EdgeInsets.symmetric(horizontal: 15, vertical: 5),
                                   child: ListTile(
                                     leading: Icon(
                                       isIncome ? Icons.arrow_downward : Icons.arrow_upward,
                                       color: isIncome ? Colors.green : Colors.red,
                                     ),
-                                    title: Text(
-                                      lang.t(catKey),
-                                      style: GoogleFonts.cairo(color: Colors.white),
-                                    ),
+                                    title: Text(lang.t(catKey), style: const TextStyle(color: Colors.white)),
                                     subtitle: Column(
                                       crossAxisAlignment: CrossAxisAlignment.start,
                                       children: [
-                                        Text(
-                                          _formatFullDate(dateStr),
-                                          style: const TextStyle(color: Colors.grey, fontSize: 11),
-                                        ),
+                                        Text(_formatFullDate(dateStr), style: const TextStyle(color: Colors.grey, fontSize: 11)),
                                         if (snapshot != "--")
-                                          Text(
-                                            "الرصيد بعد: $snapshot DH",
-                                            style: const TextStyle(color: Colors.amber, fontSize: 10),
-                                          ),
+                                          Text("${lang.t('current_balance')}: $snapshot DH", style: const TextStyle(color: AppColors.accent, fontSize: 10)),
                                       ],
                                     ),
                                     trailing: Text(
                                       amountType,
-                                      style: GoogleFonts.cairo(
-                                        color: isIncome ? Colors.green : Colors.red,
-                                        fontSize: 18,
-                                      ),
+                                      style: TextStyle(color: isIncome ? Colors.green : Colors.red, fontSize: 18),
                                     ),
                                   ),
                                 ),

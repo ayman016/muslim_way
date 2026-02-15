@@ -80,8 +80,7 @@ flutter:
   # To add assets to your application, add an assets section, like this:
   assets:
     - assets/images/
-    - assets/animation/People interacting with charts and analyzing statistics.json
-    - assets/animation/People interacting with charts and analyzing statistic.json
+    - assets/animation/
   #   - images/a_dot_ham.jpeg
 
   # An image asset can refer to one or more resolution-specific "variants", see

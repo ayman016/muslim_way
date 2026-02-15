@@ -31,7 +31,6 @@ class _AuthWrapperState extends State<AuthWrapper> {
 
   @override
   Widget build(BuildContext context) {
-    // 1. بينما كنقراو SharedPreferences، بين Loading
     if (_isLoading) {
       return const Scaffold(
         backgroundColor: Colors.black,
@@ -39,16 +38,12 @@ class _AuthWrapperState extends State<AuthWrapper> {
       );
     }
 
-    // 2. واش المستخدم مسجل بـ Firebase؟
     final user = FirebaseAuth.instance.currentUser;
 
-    // 3. القرار:
-    // إلا كان مسجل (user != null) OR دار تخطي (_hasSkippedLogin == true) -> Root
     if (user != null || _hasSkippedLogin == true) {
       return const Root();
     }
 
-    // 4. وإلا -> سير لصفحة الدخول
     return const LoginPage();
   }
 }

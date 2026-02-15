@@ -34,15 +34,16 @@ class _StatsPageState extends State<StatsPage>
             children: [
               
               // ✅ 2. هنا زدنا الأنيميشن فالفوق
-              Center(
-                child: SizedBox(
-                  height: 230, // حجم مناسب للأنيميشن
-                  child: Lottie.asset(
-                    'assets/animation/People interacting with charts and analyzing statistic.json', // تأكد أنك سميتيه هكا فالملفات
-                    fit: BoxFit.contain,
-                  ),
-                ),
-              ),
+            Center(
+  child: SizedBox(
+    height: 130, // نفس الحجم
+    child: Image.asset(
+      'assets/animation/be.gif',
+      fit: BoxFit.contain,
+    ),
+  ),
+),
+  
               
               const SizedBox(height: 10),
 

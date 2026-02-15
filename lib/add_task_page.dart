@@ -85,10 +85,13 @@ class _AddTaskPageState extends State<AddTaskPage> {
   }
 
   // ✅ زر الإتمام من داخل صفحة التعديل
+// ✅ زر الإتمام من داخل صفحة التعديل
   void _markAsDone() async {
     if (widget.taskIndex != null) {
       final provider = Provider.of<UserDataProvider>(context, listen: false);
-      await provider.markTaskAsDone(widget.taskIndex!);
+      
+      // ✅ تم التصحيح: زدنا حرف 'e' فاللخر
+      await provider.markTaskAsDone(widget.taskIndex!); 
       
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(

@@ -1,24 +1,23 @@
-import 'package:cloud_firestore/cloud_firestore.dart'; // 👈 ضروري
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class AuthService {
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final GoogleSignIn _googleSignIn = GoogleSignIn();
-  final FirebaseFirestore _firestore = FirebaseFirestore.instance; // 👈 زدنا هادي
+  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
   User? get currentUser => _auth.currentUser;
   Stream<User?> get authStateChanges => _auth.authStateChanges();
 
+  // ✅ 1. تسجيل الدخول مع دمج البيانات (Guest -> Firebase)
   Future<UserCredential?> signInWithGoogle() async {
     try {
-      // 1. عملية الدخول
       final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
       if (googleUser == null) return null;
 
-      // ✅ صحيح (زدنا await)
-final GoogleSignInAuthentication googleAuth = await googleUser.authentication;
-
+      final GoogleSignInAuthentication googleAuth = await googleUser.authentication;
       final AuthCredential credential = GoogleAuthProvider.credential(
         accessToken: googleAuth.accessToken,
         idToken: googleAuth.idToken,
@@ -27,9 +26,9 @@ final GoogleSignInAuthentication googleAuth = await googleUser.authentication;
       final UserCredential userCredential = await _auth.signInWithCredential(credential);
       final User? user = userCredential.user;
 
-      // 2. 👇 تسجيل معلومات المستخدم فـ Database (Firestore)
       if (user != null) {
-        await _saveUserToFirestore(user);
+        // 🔥 اللحظة الحاسمة: نقل بيانات الزائر (إذا وجدت) إلى حساب جوجل الجديد
+        await _syncGuestDataToFirebase(user);
       }
 
       return userCredential;
@@ -39,24 +38,65 @@ final GoogleSignInAuthentication googleAuth = await googleUser.authentication;
     }
   }
 
-  // 👇 دالة جديدة كتسجل المعلومات
-  Future<void> _saveUserToFirestore(User user) async {
-    try {
-      // كنسجلوه فالكوليكشن 'users' بالـ ID ديالو
-      await _firestore.collection('users').doc(user.uid).set({
+  // 👇 دالة الدمج: تأخذ ما في الهاتف وترفعه للسحابة
+  Future<void> _syncGuestDataToFirebase(User user) async {
+    final prefs = await SharedPreferences.getInstance();
+    
+    double localSalary = prefs.getDouble('guest_salary') ?? 0.0;
+    double localBalance = prefs.getDouble('guest_balance') ?? 0.0;
+    List<String> localTransactions = prefs.getStringList('guest_transactions') ?? [];
+    List<String> localTasks = prefs.getStringList('guest_tasks') ?? [];
+
+    // إذا كان الهاتف فارغاً، لا نفعل شيئاً سوى تسجيل المستخدم
+    if (localSalary == 0 && localBalance == 0 && localTransactions.isEmpty && localTasks.isEmpty) {
+      await _saveUserToFirestore(user);
+      return;
+    }
+
+    final userDocRef = _firestore.collection('users').doc(user.uid);
+    final userDoc = await userDocRef.get();
+
+    if (!userDoc.exists) {
+      // ✅ مستخدم جديد في Firebase: ننسخ له بيانات الزائر
+      await userDocRef.set({
         'uid': user.uid,
         'email': user.email,
         'displayName': user.displayName,
-        'photoURL': user.photoURL,
-        'lastLogin': FieldValue.serverTimestamp(), // فوقاش دخل آخر مرة
-      }, SetOptions(merge: true)); // merge: true باش ما يمسحش الداتا القديمة إلا كانت
-    } catch (e) {
-      print("Error saving user to Firestore: $e");
+        'salary_amount': localSalary,      // ✅ الراتب انتقل
+        'wallet_balance': localBalance,    // ✅ الرصيد انتقل
+        'wallet_transactions': localTransactions,
+        'user_tasks': localTasks,
+        'created_at': FieldValue.serverTimestamp(),
+        'lastLogin': FieldValue.serverTimestamp(),
+      });
+    } else {
+      // مستخدم قديم: نحدث فقط وقت الدخول (لا نمسح بياناته القديمة)
+      await userDocRef.update({
+        'lastLogin': FieldValue.serverTimestamp(),
+      });
     }
   }
 
+  Future<void> _saveUserToFirestore(User user) async {
+    await _firestore.collection('users').doc(user.uid).set({
+      'uid': user.uid,
+      'email': user.email,
+      'displayName': user.displayName,
+      'lastLogin': FieldValue.serverTimestamp(),
+    }, SetOptions(merge: true));
+  }
+
+  // ✅ 2. تسجيل الخروج مع "تصفير" الهاتف (Reset)
   Future<void> signOut() async {
-    await _googleSignIn.signOut();
-    await _auth.signOut();
+    try {
+      await _googleSignIn.signOut();
+      await _auth.signOut();
+      
+      // 🔥 هنا نمسح ذاكرة الزائر ليعود التطبيق جديداً لمن يستخدمه بعدك
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.clear(); 
+    } catch (e) {
+      print("Error signing out: $e");
+    }
   }
 }
