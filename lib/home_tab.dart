@@ -119,7 +119,7 @@ class _NextPrayerCard extends StatelessWidget {
                   Text(data.time, style: GoogleFonts.cairo(color: Color(0xff00C2CB), fontSize: 20)),
                 ],
               ),
-              const Icon(Icons.mosque, size: 70, color: Colors.white24)
+              const Icon(Icons.timelapse, size: 70, color: Color(0xff00C2CB))
                   .animate(onPlay: (c) => c.repeat(reverse: true))
                   .scaleXY(begin: 1, end: 1.1, duration: 2.seconds),
             ],

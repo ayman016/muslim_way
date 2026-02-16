@@ -3,6 +3,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_qiblah/flutter_qiblah.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:provider/provider.dart';
+import 'package:muslim_way/providers/language_provider.dart';
+import 'package:muslim_way/theme/app_colors.dart'; // ✅ استدعاء الألوان الجديدة
 
 class QiblaPage extends StatefulWidget {
   const QiblaPage({super.key});
@@ -14,7 +17,7 @@ class QiblaPage extends StatefulWidget {
 class _QiblaPageState extends State<QiblaPage> with WidgetsBindingObserver {
   final _deviceSupport = FlutterQiblah.androidDeviceSensorSupport();
   
-  // 👇 مفتاح التحديث
+  // مفتاح التحديث
   int _refreshKey = 0; 
 
   @override
@@ -29,11 +32,10 @@ class _QiblaPageState extends State<QiblaPage> with WidgetsBindingObserver {
     super.dispose();
   }
 
-  // 👇 دالة المراقبة: غير يرجع المستخدم من Settings، دير Refresh
+  // دالة المراقبة: عند العودة من الإعدادات، نقوم بالتحديث
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed) {
-      print("User returned to app, refreshing Qibla page...");
       setState(() {
         _refreshKey++; 
       });
@@ -42,39 +44,56 @@ class _QiblaPageState extends State<QiblaPage> with WidgetsBindingObserver {
 
   @override
   Widget build(BuildContext context) {
-    // 👇 استعملنا المفتاح هنا باش الصفحة تعاود تبدا من 0
+    final lang = context.watch<LanguageProvider>();
+
     return Scaffold(
       key: ValueKey(_refreshKey), 
-      backgroundColor: Colors.grey.shade900,
+      backgroundColor: AppColors.background, // ✅ استخدام لون الخلفية الموحد (Navy)
       appBar: AppBar(
-        title: Text('اتجاه القبلة', style: GoogleFonts.cairo(color: Colors.white)),
+        // ✅ استخدام مفتاح الترجمة للعنوان
+        title: Text(lang.t('qibla_direction'), style: GoogleFonts.cairo(color: Colors.white)),
         backgroundColor: Colors.transparent,
-        iconTheme: IconThemeData(color: Colors.white),
+        elevation: 0,
+        iconTheme: const IconThemeData(color: Colors.white),
         centerTitle: true,
       ),
       body: Stack(
         children: [
+           // ✅ الخلفية
            SizedBox(
             width: double.infinity,
             height: double.infinity,
-            child: Image.asset('assets/images/morningbg.jpg', fit: BoxFit.cover),
+            child: Image.asset(
+              'assets/images/morningbg.jpg', 
+              fit: BoxFit.cover,
+              color: AppColors.background.withOpacity(0.7), // ✅ دمج الصورة مع لون الخلفية
+              colorBlendMode: BlendMode.darken,
+            ),
           ),
-          Container(color: Colors.black.withOpacity(0.6)),
-
+          
           FutureBuilder(
             future: _deviceSupport,
             builder: (context, snapshot) {
               if (snapshot.connectionState == ConnectionState.waiting) {
-                return Center(child: CircularProgressIndicator(color: Colors.amber));
+                return const Center(child: CircularProgressIndicator(color: AppColors.accent)); // ✅ Cyan Loader
               }
               if (snapshot.hasError) {
-                return Center(child: Text("خطأ: ${snapshot.error}", style: TextStyle(color: Colors.white)));
+                return Center(
+                  child: Text(
+                    "${lang.t('error')}: ${snapshot.error}", 
+                    style: GoogleFonts.cairo(color: Colors.white)
+                  )
+                );
               }
               if (snapshot.data == true) {
-                // 👇 عيطنا للويدجت اللي كتأكد من GPS
-                return LocationChecker(); 
+                return const LocationChecker(); 
               } else {
-                return Center(child: Text("جهازك لا يدعم البوصلة", style: TextStyle(color: Colors.white)));
+                return Center(
+                  child: Text(
+                    lang.t('device_not_supported'), 
+                    style: GoogleFonts.cairo(color: Colors.white)
+                  )
+                );
               }
             },
           ),
@@ -117,8 +136,10 @@ class _LocationCheckerState extends State<LocationChecker> {
 
   @override
   Widget build(BuildContext context) {
+    final lang = context.watch<LanguageProvider>();
+
     if (isGpsEnabled == null) {
-      return Center(child: CircularProgressIndicator(color: Colors.amber));
+      return const Center(child: CircularProgressIndicator(color: AppColors.accent));
     }
 
     if (isGpsEnabled == false) {
@@ -127,26 +148,34 @@ class _LocationCheckerState extends State<LocationChecker> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.location_off, color: Colors.redAccent, size: 60),
-            SizedBox(height: 20),
+            const Icon(Icons.location_off, color: Colors.redAccent, size: 60),
+            const SizedBox(height: 20),
             Text(
-              "المرجو تفعيل GPS لتحديد القبلة",
+              lang.t('enable_gps_msg'), // ✅ رسالة تفعيل GPS مترجمة
               style: GoogleFonts.cairo(color: Colors.white, fontSize: 18),
+              textAlign: TextAlign.center,
             ),
-            SizedBox(height: 20),
+            const SizedBox(height: 20),
             ElevatedButton(
-              style: ElevatedButton.styleFrom(backgroundColor: Colors.amber),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primary, // ✅ Royal Blue Button
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10))
+              ),
               onPressed: () async {
                 await Geolocator.openLocationSettings();
               },
-              child: Text("تفعيل GPS", style: GoogleFonts.cairo(color: Colors.black, fontWeight: FontWeight.bold)),
+              child: Text(
+                lang.t('enable_gps'), // ✅ زر تفعيل GPS مترجم
+                style: GoogleFonts.cairo(fontWeight: FontWeight.bold)
+              ),
             )
           ],
         ),
       );
     }
 
-    return QiblaCompass();
+    return const QiblaCompass();
   }
 }
 
@@ -155,11 +184,13 @@ class QiblaCompass extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final lang = context.watch<LanguageProvider>();
+
     return StreamBuilder(
       stream: FlutterQiblah.qiblahStream,
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
-           return Center(child: CircularProgressIndicator(color: Colors.white));
+           return const Center(child: CircularProgressIndicator(color: AppColors.accent));
         }
         
         if (snapshot.hasData) {
@@ -170,18 +201,53 @@ class QiblaCompass extends StatelessWidget {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Transform.rotate(
-                  angle: angle,
-                  child: Image.asset('assets/images/qiblaarrow.png', height: 300),
+                Stack(
+                  alignment: Alignment.center,
+                  children: [
+                    // ✅ خلفية دائرية للبوصلة
+                    Container(
+                      width: 320,
+                      height: 320,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        border: Border.all(color: AppColors.primary.withOpacity(0.3), width: 2),
+                        color: AppColors.surface.withOpacity(0.2),
+                      ),
+                    ),
+                    Transform.rotate(
+                      angle: angle,
+                      child: Image.asset(
+                        'assets/images/qiblaarrow.png', 
+                        height: 300,
+                        // يمكنك تلوين الصورة إذا كانت شفافة وتدعم ذلك، وإلا اتركها كما هي
+                        // color: AppColors.accent, 
+                      ),
+                    ),
+                  ],
                 ),
-                SizedBox(height: 30),
-                Text("${qiblahDirection.qiblah.toStringAsFixed(0)}°", style: GoogleFonts.cairo(color: Colors.white, fontSize: 40, fontWeight: FontWeight.bold)),
-                Text("درجة نحو الكعبة", style: GoogleFonts.cairo(color: Colors.grey, fontSize: 16)),
+                const SizedBox(height: 30),
+                Text(
+                  "${qiblahDirection.qiblah.toStringAsFixed(0)}°", 
+                  style: GoogleFonts.cairo(
+                    color: AppColors.accent, // ✅ درجة الزاوية بـ Cyan
+                    fontSize: 40, 
+                    fontWeight: FontWeight.bold
+                  )
+                ),
+                Text(
+                  lang.t('degree_to_kaaba'), // ✅ نص "درجة نحو الكعبة" مترجم
+                  style: GoogleFonts.cairo(color: Colors.grey, fontSize: 16)
+                ),
               ],
             ),
           );
         }
-        return Center(child: Text("جاري البحث عن الموقع...", style: TextStyle(color: Colors.white)));
+        return Center(
+          child: Text(
+            lang.t('searching_location'), // ✅ نص "جاري البحث" مترجم
+            style: GoogleFonts.cairo(color: Colors.white)
+          )
+        );
       },
     );
   }

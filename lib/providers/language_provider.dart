@@ -86,6 +86,14 @@ class LanguageProvider with ChangeNotifier {
       // Time
       'today': 'اليوم',
       'yesterday': 'الأمس',
+
+      'qibla_direction': 'اتجاه القبلة',
+  'enable_gps_msg': 'المرجو تفعيل GPS لتحديد القبلة',
+  'enable_gps': 'تفعيل GPS',
+  'degree_to_kaaba': 'درجة نحو الكعبة',
+  'searching_location': 'جاري البحث عن الموقع...',
+  'device_not_supported': 'جهازك لا يدعم البوصلة',
+  'error': 'خطأ',
     },
     
     // 🇺🇸 English
@@ -119,6 +127,15 @@ class LanguageProvider with ChangeNotifier {
       'cat_religion': 'Religion',
       'cat_study': 'Study',
       'cat_other': 'Other',
+
+      //qibla 
+      'qibla_direction': 'Qibla Direction',
+  'enable_gps_msg': 'Please enable GPS to find Qibla',
+  'enable_gps': 'Enable GPS',
+  'degree_to_kaaba': 'degrees to Kaaba',
+  'searching_location': 'Searching for location...',
+  'device_not_supported': 'Device not supported',
+  'error': 'Error',
 
       // Finance UI
       'current_balance': 'Current Balance',
@@ -218,6 +235,14 @@ class LanguageProvider with ChangeNotifier {
       'edit_balance_title': 'Modifier le Solde',
       'edit_balance_desc': 'Votre solde et salaire seront mis à jour.',
       'success_update': 'Mis à jour avec succès',
+      //qibla 
+      'qibla_direction': 'Direction Qibla',
+  'enable_gps_msg': 'Veuillez activer le GPS',
+  'enable_gps': 'Activer GPS',
+  'degree_to_kaaba': 'degrés vers la Kaaba',
+  'searching_location': 'Recherche de position...',
+  'device_not_supported': 'Appareil non supporté',
+  'error': 'Erreur',
 
       // Stats UI
       'overview': 'Aperçu',
@@ -281,6 +306,14 @@ class LanguageProvider with ChangeNotifier {
       'cat_religion': 'دين',
       'cat_study': 'قراية',
       'cat_other': 'شي حاجة أخرى',
+      //qibla 
+      'qibla_direction': 'اتجاه القبلة',
+  'enable_gps_msg': 'شعل GPS باش تلقى القبلة',
+  'enable_gps': 'شعل GPS',
+  'degree_to_kaaba': 'درجة للكعبة',
+  'searching_location': 'كانقلب على البلاصة...',
+  'device_not_supported': 'تلفونك ما فيهش البوصلة',
+  'error': 'مشكل',
       
       // Finance UI
       'current_balance': 'شحال عندي',

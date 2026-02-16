@@ -378,7 +378,7 @@ class AppDrawer extends StatelessWidget {
                   icon: Icons.camera_alt_outlined, 
                   text: 'Instagram', 
                   onTap: () async {
-                     final Uri url = Uri.parse('https://www.instagram.com/ayman__016_?igsh=MW1qeW1qc2ZlMnE2bA==');
+                     final Uri url = Uri.parse('https://www.instagram.com/zimam.app?igsh=Z2V5bDd4bGl6OGdp');
                      await launchUrl(url, mode: LaunchMode.externalApplication);
                   }
                 ),

@@ -3,6 +3,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:muslim_way/auth_service.dart';
 import 'package:muslim_way/root.dart'; 
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:muslim_way/theme/app_colors.dart'; // ✅ استدعاء الألوان
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -44,75 +45,144 @@ class _LoginPageState extends State<LoginPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.black,
+      // ✅ الخلفية Navy الأساسية
+      backgroundColor: AppColors.background,
       body: Stack(
         children: [
+          // ✅ إضافة تدرج خفيف جداً في الخلفية لإعطاء عمق
           Container(
             decoration: BoxDecoration(
               gradient: LinearGradient(
                 begin: Alignment.topCenter,
                 end: Alignment.bottomCenter,
-                colors: [Colors.black, Colors.grey.shade900],
+                colors: [
+                  AppColors.background, 
+                  Colors.black.withOpacity(0.8)
+                ],
               ),
             ),
           ),
+          
           SafeArea(
             child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 40),
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 40),
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
+                  // 🟢 القسم العلوي: الشعار والاسم
                   Column(
                     children: [
-                      const SizedBox(height: 50),
-                      // 👇 بدلت Image بـ Icon مؤقتاً باش ما يتكوانساش التطبيق
-                      // إلا عندك اللوغو بصح، حيد هاد Icon ورجع Image.asset
-                      const Icon(Icons.mosque, size: 100, color: Colors.amber), 
+                      const SizedBox(height: 60),
                       
-                      const SizedBox(height: 20),
-                      Text("مرحباً بك في Muslim Way", 
-                        style: GoogleFonts.cairo(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold)),
-                      const SizedBox(height: 10),
+                      // ✅ 1. لوغو التطبيق
+                      Container(
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          boxShadow: [
+                            BoxShadow(
+                              color: AppColors.primary.withOpacity(0.2),
+                              blurRadius: 30,
+                              spreadRadius: 10,
+                            )
+                          ]
+                        ),
+                        child: Image.asset(
+                          'assets/images/app_iconuse.png',
+                          height: 140, // حجم مناسب
+                          width: 140,
+                        ),
+                      ),
+                      
+                      const SizedBox(height: 30),
+                      
+                      // ✅ 2. اسم التطبيق "Zimam"
                       Text(
-                        "لحفظ بياناتك (الأذكار، المصاريف...) وعدم ضياعها،\nننصحك بتسجيل الدخول.",
+                        "Zimam", 
+                        style: GoogleFonts.cairo(
+                          color: Colors.white, 
+                          fontSize: 40, 
+                          fontWeight: FontWeight.bold,
+                          letterSpacing: 1.5,
+                        )
+                      ),
+                      
+                      const SizedBox(height: 10),
+                      
+                      // وصف بسيط
+                      Text(
+                        "رفيقك اليومي لتنظيم العبادات والمصاريف",
                         textAlign: TextAlign.center,
-                        style: GoogleFonts.cairo(color: Colors.grey, fontSize: 16),
+                        style: GoogleFonts.cairo(
+                          color: Colors.grey.shade400, 
+                          fontSize: 14
+                        ),
                       ),
                     ],
                   ),
 
+                  // 🟢 القسم السفلي: أزرار الدخول
                   Column(
                     children: [
-                      isLoading 
-                      ? const CircularProgressIndicator(color: Colors.amber)
-                      : SizedBox(
-                        width: double.infinity,
-                        height: 55,
-                        child: ElevatedButton.icon(
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.white,
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
-                          ),
-                          onPressed: _handleGoogleSignIn,
-                          // 👇 درت ليك أيقونة ديال Google (حرف G) موجودة فـ Flutter
-                          // بلا ما تحتاج تصويرة png دابا
-                          icon: const Icon(Icons.g_mobiledata, color: Colors.red, size: 40), 
-                          
-                          // 👇 هذا هو الحل ديال Overflow: درنا FittedBox
-                          label: FittedBox(
-                            child: Text("تسجيل الدخول عبر Google", 
-                              style: GoogleFonts.cairo(color: Colors.black, fontSize: 16, fontWeight: FontWeight.bold)),
+                      if (isLoading)
+                        const CircularProgressIndicator(color: AppColors.primary)
+                      else
+                        SizedBox(
+                          width: double.infinity,
+                          height: 55,
+                          child: ElevatedButton(
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.white, // خلفية بيضاء لزر جوجل (Standard)
+                              foregroundColor: Colors.black,
+                              elevation: 0,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(30), // حواف دائرية عصرية
+                              ),
+                            ),
+                            onPressed: _handleGoogleSignIn,
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                // ✅ 3. شعار جوجل
+                                Image.asset(
+                                  'assets/images/google.png',
+                                  height: 24,
+                                ),
+                                const SizedBox(width: 12),
+                                Text(
+                                  "متابعة باستخدام Google", 
+                                  style: GoogleFonts.cairo(
+                                    color: Colors.black87, 
+                                    fontSize: 16, 
+                                    fontWeight: FontWeight.bold
+                                  )
+                                ),
+                              ],
+                            ),
                           ),
                         ),
-                      ),
                       
-                      const SizedBox(height: 15),
+                      const SizedBox(height: 20),
                       
+                      // زر التخطي
                       TextButton(
                         onPressed: _skipLogin,
-                        child: Text("تخطي والمتابعة كزائر", 
-                          style: GoogleFonts.cairo(color: Colors.grey, fontSize: 16, decoration: TextDecoration.underline)),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              "تخطي والمتابعة كزائر", 
+                              style: GoogleFonts.cairo(
+                                color: AppColors.accent, // ✅ لون Cyan الجذاب
+                                fontSize: 15,
+                                fontWeight: FontWeight.bold
+                              )
+                            ),
+                            const SizedBox(width: 5),
+                            const Icon(Icons.arrow_forward, size: 18, color: AppColors.accent)
+                          ],
+                        ),
                       ),
+                      const SizedBox(height: 20),
                     ],
                   )
                 ],
