@@ -34,12 +34,10 @@ class _FinancePageState extends State<FinancePage> with AutomaticKeepAliveClient
     });
   }
 
-  // ✅ دالة حوار تعديل الرصيد (Settings)
   void _editSalaryDialog() {
     final lang = context.read<LanguageProvider>();
     final provider = context.read<UserDataProvider>(); 
     
-    // 🔥 التغيير: كنعمرو الخانة بـ الرصيد الحالي (Balance) باش ما يوقعش اختلاف
     final controller = TextEditingController(
       text: provider.balance > 0 ? provider.balance.toStringAsFixed(0) : "",
     );
@@ -48,11 +46,11 @@ class _FinancePageState extends State<FinancePage> with AutomaticKeepAliveClient
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: AppColors.surface,
-        title: Text("تعديل الرصيد الحالي", style: const TextStyle(color: AppColors.primary)),
+        title: Text(lang.t('edit_balance_title'), style: const TextStyle(color: AppColors.primary)),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text("سيتم تحديث رصيدك وراتبك لهذه القيمة.", style: TextStyle(color: Colors.grey[400], fontSize: 12)),
+            Text(lang.t('edit_balance_desc'), style: TextStyle(color: Colors.grey[400], fontSize: 12)),
             const SizedBox(height: 10),
             TextField(
               controller: controller,
@@ -79,15 +77,12 @@ class _FinancePageState extends State<FinancePage> with AutomaticKeepAliveClient
             onPressed: () async {
               if (controller.text.isNotEmpty) {
                 double newAmount = double.parse(controller.text);
-                
-                // ✅ فاش كدير Save، Provider غايحدث الرصيد والراتب بجوج لنفس القيمة
                 await provider.updateSalary(newAmount);
-                
                 Navigator.pop(ctx);
                 
                 if (mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text("✅ تم تحديث الرصيد بنجاح", style: GoogleFonts.cairo()), backgroundColor: Colors.green)
+                    SnackBar(content: Text(lang.t('success_update'), style: GoogleFonts.cairo()), backgroundColor: Colors.green)
                   );
                 }
               }
@@ -114,7 +109,7 @@ class _FinancePageState extends State<FinancePage> with AutomaticKeepAliveClient
           keyboardType: TextInputType.number,
           style: const TextStyle(color: Colors.white),
           decoration: const InputDecoration(
-            hintText: "مثلاً: 5000",
+            hintText: "0.00",
             hintStyle: TextStyle(color: Colors.grey),
             enabledBorder: UnderlineInputBorder(borderSide: BorderSide(color: AppColors.primary)),
           ),
@@ -129,7 +124,7 @@ class _FinancePageState extends State<FinancePage> with AutomaticKeepAliveClient
             onPressed: () {
               if (controller.text.isNotEmpty) {
                 final amount = double.parse(controller.text);
-                context.read<UserDataProvider>().updateSalary(amount); // نستعمل updateSalary لتحديث الاثنين
+                context.read<UserDataProvider>().updateSalary(amount);
                 Navigator.pop(ctx);
               }
             },
@@ -355,10 +350,11 @@ class _FinancePageState extends State<FinancePage> with AutomaticKeepAliveClient
     );
   }
 
-  String _formatFullDate(String isoString) {
+  // ✅ الدالة المساعدة مع إصلاح التاريخ
+  String _formatFullDate(String isoString, String locale) {
     try {
       final date = DateTime.parse(isoString);
-      return DateFormat('dd MMM HH:mm', 'ar').format(date);
+      return DateFormat('dd MMM HH:mm', locale).format(date);
     } catch (_) {
       return "";
     }
@@ -368,6 +364,9 @@ class _FinancePageState extends State<FinancePage> with AutomaticKeepAliveClient
   Widget build(BuildContext context) {
     super.build(context);
     final lang = context.watch<LanguageProvider>();
+    
+    // ✅ إصلاح التاريخ للدارجة
+    final String dateLocale = lang.currentLang == 'da' ? 'ar' : lang.currentLang;
 
     return Scaffold(
       backgroundColor: Colors.transparent,
@@ -414,7 +413,7 @@ class _FinancePageState extends State<FinancePage> with AutomaticKeepAliveClient
                         left: 10,
                         child: IconButton(
                           icon: const Icon(Icons.settings, color: Colors.white54),
-                          onPressed: _editSalaryDialog, // ✅
+                          onPressed: _editSalaryDialog,
                           tooltip: lang.t('cat_salary'),
                         ),
                       ),
@@ -454,7 +453,9 @@ class _FinancePageState extends State<FinancePage> with AutomaticKeepAliveClient
                         final monthKey = monthKeys[sectionIndex];
                         final monthTrans = grouped[monthKey]!;
                         final monthlySavings = _calculateMonthlySavings(monthTrans);
-                        final monthName = DateFormat('MMMM yyyy', lang.currentLang).format(
+                        
+                        // ✅ تطبيق إصلاح التاريخ هنا
+                        final monthName = DateFormat('MMMM yyyy', dateLocale).format(
                           DateFormat('yyyy-MM').parse(monthKey),
                         );
 
@@ -515,7 +516,8 @@ class _FinancePageState extends State<FinancePage> with AutomaticKeepAliveClient
                                     subtitle: Column(
                                       crossAxisAlignment: CrossAxisAlignment.start,
                                       children: [
-                                        Text(_formatFullDate(dateStr), style: const TextStyle(color: Colors.grey, fontSize: 11)),
+                                        // ✅ وتطبيق إصلاح التاريخ هنا أيضاً
+                                        Text(_formatFullDate(dateStr, dateLocale), style: const TextStyle(color: Colors.grey, fontSize: 11)),
                                         if (snapshot != "--")
                                           Text("${lang.t('current_balance')}: $snapshot DH", style: const TextStyle(color: AppColors.accent, fontSize: 10)),
                                       ],

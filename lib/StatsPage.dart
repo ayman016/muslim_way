@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:muslim_way/providers/user_data_provider.dart';
+import 'package:muslim_way/providers/language_provider.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
-import 'package:lottie/lottie.dart'; // ✅ 1. ضروري لاستدعاء الأنيميشن
+import 'package:lottie/lottie.dart'; 
+import 'package:muslim_way/theme/app_colors.dart'; // ✅ استدعاء الألوان الجديدة
 
 class StatsPage extends StatefulWidget {
   const StatsPage({super.key});
@@ -21,29 +23,20 @@ class _StatsPageState extends State<StatsPage>
   @override
   Widget build(BuildContext context) {
     super.build(context); 
+    final lang = context.watch<LanguageProvider>();
+
+    // ✅ إصلاح التاريخ للدارجة
+    final String dateLocale = lang.currentLang == 'da' ? 'ar' : lang.currentLang;
 
     return Scaffold(
       backgroundColor: Colors.transparent,
       body: SafeArea(
         child: SingleChildScrollView(
           physics: const BouncingScrollPhysics(),
-          // نقصنا padding الفوقاني شوية حيت زدنا الأنيميشن
           padding: const EdgeInsets.only(top: 20, left: 20, right: 20, bottom: 100),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              
-              // ✅ 2. هنا زدنا الأنيميشن فالفوق
-            Center(
-  child: SizedBox(
-    height: 130, // نفس الحجم
-    child: Image.asset(
-      'assets/animation/be.gif',
-      fit: BoxFit.contain,
-    ),
-  ),
-),
-  
               
               const SizedBox(height: 10),
 
@@ -55,7 +48,7 @@ class _StatsPageState extends State<StatsPage>
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        "نظرة عامة 📊",
+                        "${lang.t('overview')} 📊",
                         style: GoogleFonts.cairo(
                           color: Colors.white,
                           fontSize: 26,
@@ -63,7 +56,7 @@ class _StatsPageState extends State<StatsPage>
                         ),
                       ),
                       Text(
-                        DateFormat('MMMM yyyy', 'ar').format(DateTime.now()),
+                        DateFormat('MMMM yyyy', dateLocale).format(DateTime.now()),
                         style: GoogleFonts.cairo(
                           color: Colors.white54,
                           fontSize: 14,
@@ -75,28 +68,32 @@ class _StatsPageState extends State<StatsPage>
                   Container(
                     padding: const EdgeInsets.all(10),
                     decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.05),
+                      color: AppColors.surface.withOpacity(0.5), // ✅ Surface
                       shape: BoxShape.circle,
-                      border: Border.all(color: Colors.white10),
+                      border: Border.all(color: AppColors.primary.withOpacity(0.3)), // ✅ Royal Blue border
                     ),
-                    child: const Icon(Icons.bar_chart_rounded, color: Colors.amber),
+                    child: const Icon(Icons.bar_chart_rounded, color: AppColors.accent), // ✅ Cyan icon
                   )
                 ],
               ),
               
-              const SizedBox(height: 30),
-
-              // 1️⃣ قسم الميزانية
-              const _BudgetSection(),
+              // Animation
+              Center(
+                child: SizedBox(
+                  height: 130, 
+                  child: Image.asset(
+                    'assets/animation/be.gif',
+                    fit: BoxFit.contain,
+                  ),
+                ),
+              ),
               
               const SizedBox(height: 30),
 
-              // 2️⃣ قسم تحليل المصاريف (Professional Animation)
-              const _ExpenseBreakdownSection(),
-
+              const _BudgetSection(),
               const SizedBox(height: 30),
-
-              // 3️⃣ قسم المهام
+              const _ExpenseBreakdownSection(),
+              const SizedBox(height: 30),
               const _TasksSection(),
             ],
           ),
@@ -107,20 +104,22 @@ class _StatsPageState extends State<StatsPage>
 }
 
 // ==========================================
-// 1️⃣ Budget Section Widget (Professional Look)
+// 1️⃣ Budget Section Widget (Styled)
 // ==========================================
 class _BudgetSection extends StatelessWidget {
   const _BudgetSection();
 
   @override
   Widget build(BuildContext context) {
+    final lang = context.watch<LanguageProvider>();
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Padding(
           padding: const EdgeInsets.only(bottom: 10),
           child: Text(
-            "الميزانية الشهرية",
+            lang.t('monthly_budget'),
             style: GoogleFonts.cairo(
               color: Colors.white,
               fontSize: 18,
@@ -154,21 +153,22 @@ class _BudgetSection extends StatelessWidget {
             }
 
             final spentPercentage = data.salary > 0 ? (totalExpenses / data.salary) : 0.0;
+            
+            // ✅ ألوان الميزانية الجديدة
             final budgetColor = spentPercentage > 1.0 
-                ? const Color(0xFFFF5252) 
-                : (spentPercentage > 0.8 ? const Color(0xFFFFAB40) : const Color(0xFF69F0AE));
+                ? const Color(0xFFFF5252) // أحمر للخطر
+                : (spentPercentage > 0.8 ? const Color(0xFFFFAB40) : AppColors.accent); // Cyan للحالة الجيدة
 
-            final currencyFormat = NumberFormat("#,##0", "ar");
+            final currencyFormat = NumberFormat("#,##0", lang.currentLang == 'ar' || lang.currentLang == 'da' ? "ar" : "en_US");
 
             String statusText;
             IconData statusIcon;
             
             if (spentPercentage > 1.0) {
-              double overPercent = (spentPercentage * 100) - 100;
-              statusText = "تجاوزت الحد بـ ${overPercent.toStringAsFixed(0)}%";
+              statusText = "${lang.t('spent_ratio')} ${(spentPercentage * 100).toStringAsFixed(0)}%";
               statusIcon = Icons.warning_amber_rounded;
             } else {
-              statusText = "استهلكت ${(spentPercentage * 100).toStringAsFixed(1)}% من الراتب";
+              statusText = "${lang.t('spent_ratio')} ${(spentPercentage * 100).toStringAsFixed(1)}%";
               statusIcon = Icons.check_circle_outline_rounded;
             }
 
@@ -176,16 +176,17 @@ class _BudgetSection extends StatelessWidget {
               return Container(
                 padding: const EdgeInsets.all(20),
                 decoration: BoxDecoration(
+                  // ✅ خلفية متدرجة خفيفة بلمسة Navy
                   gradient: LinearGradient(
-                    colors: [Colors.white.withOpacity(0.05), Colors.white.withOpacity(0.02)],
+                    colors: [AppColors.surface, AppColors.background],
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
                   ),
                   borderRadius: BorderRadius.circular(24),
-                  border: Border.all(color: Colors.white.withOpacity(0.08)),
+                  border: Border.all(color: AppColors.primary.withOpacity(0.3)),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withOpacity(0.2),
+                      color: Colors.black.withOpacity(0.3),
                       blurRadius: 15,
                       offset: const Offset(0, 5),
                     )
@@ -196,9 +197,9 @@ class _BudgetSection extends StatelessWidget {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                         _buildFinanceItem("الدخل", data.salary, Colors.greenAccent, currencyFormat),
+                         _buildFinanceItem(lang.t('income'), data.salary, AppColors.accent, currencyFormat), // ✅ Dakhil Cyan
                          Container(height: 40, width: 1, color: Colors.white10),
-                         _buildFinanceItem("المصروف", totalExpenses, Colors.redAccent, currencyFormat),
+                         _buildFinanceItem(lang.t('expense'), totalExpenses, const Color(0xFFFF5252), currencyFormat), // Masrouf Red
                       ],
                     ),
                     const SizedBox(height: 20),
@@ -245,7 +246,7 @@ class _BudgetSection extends StatelessWidget {
                 ),
               );
             } else {
-              return _buildEmptyState("لم يتم تحديد الراتب الشهري");
+              return _buildEmptyState(lang.t('salary_not_set'));
             }
           },
         ),
@@ -274,7 +275,7 @@ class _BudgetSection extends StatelessWidget {
 }
 
 // ==========================================
-// 2️⃣ Expense Breakdown (Staggered Animation 🔥)
+// 2️⃣ Expense Breakdown (Styled)
 // ==========================================
 class _ExpenseBreakdownSection extends StatefulWidget {
   const _ExpenseBreakdownSection();
@@ -302,25 +303,30 @@ class _ExpenseBreakdownSectionState extends State<_ExpenseBreakdownSection> with
     super.dispose();
   }
 
-  ({String name, IconData icon, Color color}) _getCategoryDetails(String key) {
+  ({String name, IconData icon, Color color}) _getCategoryDetails(String key, LanguageProvider lang) {
+    String translatedName = lang.t(key);
+    
+    // ✅ ألوان الفئات تم تعديلها لتكون متناسقة (أكثر زرقة وبرودة)
     switch (key) {
-      case 'cat_food': return (name: "الأكل والشرب", icon: Icons.fastfood_rounded, color: const Color(0xFFFFAB91)); 
-      case 'cat_transport': return (name: "النقل", icon: Icons.directions_car_rounded, color: const Color(0xFF90CAF9)); 
-      case 'cat_shopping': return (name: "التسوق", icon: Icons.shopping_bag_rounded, color: const Color(0xFFCE93D8)); 
-      case 'cat_bills': return (name: "الفواتير", icon: Icons.receipt_long_rounded, color: const Color(0xFFFFF59D)); 
-      case 'cat_health': return (name: "الصحة", icon: Icons.medical_services_rounded, color: const Color(0xFFEF9A9A)); 
-      case 'cat_salary': return (name: "الراتب", icon: Icons.account_balance_wallet_rounded, color: const Color(0xFFA5D6A7)); 
-      default: return (name: "أخرى", icon: Icons.category_rounded, color: Colors.grey);
+      case 'cat_food': return (name: translatedName, icon: Icons.fastfood_rounded, color: const Color(0xFFFFAB91)); 
+      case 'cat_transport': return (name: translatedName, icon: Icons.directions_car_rounded, color: const Color(0xFF64B5F6)); // Blue
+      case 'cat_shopping': return (name: translatedName, icon: Icons.shopping_bag_rounded, color: const Color(0xFFBA68C8)); // Purple
+      case 'cat_bills': return (name: translatedName, icon: Icons.receipt_long_rounded, color: const Color(0xFFFFD54F)); // Yellow
+      case 'cat_health': return (name: translatedName, icon: Icons.medical_services_rounded, color: const Color(0xFFE57373)); // Red
+      case 'cat_salary': return (name: translatedName, icon: Icons.account_balance_wallet_rounded, color: AppColors.accent); // Cyan
+      default: return (name: lang.t('cat_other'), icon: Icons.category_rounded, color: Colors.grey);
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    final lang = context.watch<LanguageProvider>();
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          "أين تذهب أموالك؟ 📉",
+          "${lang.t('expense_breakdown')} 📉", 
           style: GoogleFonts.cairo(
             color: Colors.white,
             fontSize: 18,
@@ -353,7 +359,7 @@ class _ExpenseBreakdownSectionState extends State<_ExpenseBreakdownSection> with
             }
 
             if (categoryTotals.isEmpty) {
-              return _buildEmptyState("لا توجد مصاريف هذا الشهر");
+              return _buildEmptyState(lang.t('no_expenses'));
             }
 
             final sortedEntries = categoryTotals.entries.toList()
@@ -365,7 +371,7 @@ class _ExpenseBreakdownSectionState extends State<_ExpenseBreakdownSection> with
               itemCount: sortedEntries.length,
               itemBuilder: (context, index) {
                 final entry = sortedEntries[index];
-                final catDetails = _getCategoryDetails(entry.key);
+                final catDetails = _getCategoryDetails(entry.key, lang);
                 final amount = entry.value;
                 final percentage = totalMonthlyExpenses > 0 ? (amount / totalMonthlyExpenses) : 0.0;
 
@@ -387,9 +393,10 @@ class _ExpenseBreakdownSectionState extends State<_ExpenseBreakdownSection> with
                           margin: const EdgeInsets.only(bottom: 12),
                           padding: const EdgeInsets.all(12),
                           decoration: BoxDecoration(
-                            color: const Color(0xFF1E1E1E),
+                            // ✅ خلفية البطاقات Surface (Navy فاتح)
+                            color: AppColors.surface,
                             borderRadius: BorderRadius.circular(16),
-                            border: Border.all(color: Colors.white.withOpacity(0.05)),
+                            border: Border.all(color: AppColors.primary.withOpacity(0.1)),
                           ),
                           child: Column(
                             children: [
@@ -464,7 +471,7 @@ class _ExpenseBreakdownSectionState extends State<_ExpenseBreakdownSection> with
 }
 
 // ==========================================
-// 3️⃣ Tasks Section Widget (Clean Design)
+// 3️⃣ Tasks Section Widget (Styled)
 // ==========================================
 class _TasksSection extends StatefulWidget {
   const _TasksSection();
@@ -496,11 +503,13 @@ class _TasksSectionState extends State<_TasksSection> with SingleTickerProviderS
 
   @override
   Widget build(BuildContext context) {
+    final lang = context.watch<LanguageProvider>();
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          "الإنتاجية اليومية ✅",
+          "${lang.t('productivity')} ✅", 
           style: GoogleFonts.cairo(
             color: Colors.white,
             fontSize: 18,
@@ -527,15 +536,16 @@ class _TasksSectionState extends State<_TasksSection> with SingleTickerProviderS
             final taskProgress = totalTasks > 0 ? completedTodayCount / totalTasks : 0.0;
 
             if (totalTasks < 5) {
-              return _buildEmptyState("البيانات غير كافية للتحليل 📉\nأضف مهاماً أكثر");
+              return _buildEmptyState(lang.t('no_tasks_stats'));
             }
 
             return Container(
               padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
-                color: const Color(0xFF1E1E1E),
+                // ✅ Surface Color
+                color: AppColors.surface,
                 borderRadius: BorderRadius.circular(24),
-                border: Border.all(color: Colors.white.withOpacity(0.05)),
+                border: Border.all(color: AppColors.primary.withOpacity(0.2)),
               ),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceAround,
@@ -553,14 +563,14 @@ class _TasksSectionState extends State<_TasksSection> with SingleTickerProviderS
                               value: taskProgress * _animation.value,
                               strokeWidth: 8,
                               backgroundColor: Colors.white10,
-                              color: Colors.blueAccent,
+                              color: AppColors.primary, // ✅ Royal Blue progress
                               strokeCap: StrokeCap.round, 
                             ),
                           ),
                           Text(
                             "${(taskProgress * _animation.value * 100).toInt()}%",
                             style: GoogleFonts.cairo(
-                              color: Colors.white,
+                              color: AppColors.accent, // ✅ Cyan text
                               fontSize: 22,
                               fontWeight: FontWeight.bold,
                             ),
@@ -572,11 +582,11 @@ class _TasksSectionState extends State<_TasksSection> with SingleTickerProviderS
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      _buildLegend(Colors.blueAccent, "تمت اليوم: $completedTodayCount"),
+                      _buildLegend(AppColors.primary, "${lang.t('completed_today')}: $completedTodayCount"),
                       const SizedBox(height: 12),
-                      _buildLegend(Colors.white38, "متبقية: ${totalTasks - completedTodayCount}"),
+                      _buildLegend(Colors.white38, "${lang.t('remaining')}: ${totalTasks - completedTodayCount}"),
                       const SizedBox(height: 12),
-                      _buildLegend(Colors.white, "المجموع الكلي: $totalTasks"),
+                      _buildLegend(Colors.white, "${lang.t('total')}: $totalTasks"),
                     ],
                   ),
                 ],
@@ -608,7 +618,7 @@ Widget _buildEmptyState(String message) {
     width: double.infinity,
     padding: const EdgeInsets.all(25),
     decoration: BoxDecoration(
-      color: Colors.white.withOpacity(0.05),
+      color: AppColors.surface.withOpacity(0.5),
       borderRadius: BorderRadius.circular(20),
       border: Border.all(color: Colors.white10),
     ),

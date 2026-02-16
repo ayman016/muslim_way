@@ -110,15 +110,15 @@ class _SettingsPageState extends State<SettingsPage> {
                 const Spacer(),
                 Center(child: Text(lang.t('version'), style: GoogleFonts.cairo(color: Colors.grey, fontSize: 12))),
                 // زيد هاد الزر فين ما بغيتي فشي صفحة
-ElevatedButton(
-  onPressed: () async {
-    await NotificationService().showImmediateNotification(
-      "تجربة", 
-      "واش وصلك هاد الإشعار؟"
-    );
-  },
-  child: Text("جرب الإشعار دابا"),
-)
+// ElevatedButton(
+//   onPressed: () async {
+//     await NotificationService().showImmediateNotification(
+//       "تجربة", 
+//       "واش وصلك هاد الإشعار؟"
+//     );
+//   },
+//   child: Text("جرب الإشعار دابا"),
+// )
               ],
             ),
           ),

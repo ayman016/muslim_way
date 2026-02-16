@@ -1,7 +1,9 @@
 import 'dart:io';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+
 import 'package:firebase_core/firebase_core.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:provider/provider.dart';
@@ -13,6 +15,7 @@ import 'package:muslim_way/notification_service.dart';
 import 'package:muslim_way/providers/prayer_provider.dart';
 import 'package:muslim_way/providers/language_provider.dart';
 import 'package:muslim_way/providers/user_data_provider.dart';
+import 'package:muslim_way/theme/app_theme.dart'; // ✅ استدعاء ملف الثيم الجديد
 
 // ✅ Background dispatcher
 @pragma('vm:entry-point')
@@ -203,7 +206,7 @@ void main() async {
     debugPrint("❌ Workmanager error: $e");
   }
 
-  // 6️⃣ Language
+  // 6️⃣ Language Setup
   final languageProvider = LanguageProvider();
   await languageProvider.loadLanguage();
 
@@ -215,10 +218,55 @@ void main() async {
         ChangeNotifierProvider(create: (_) => PrayerProvider()),
         ChangeNotifierProvider(create: (_) => UserDataProvider()),
       ],
-      child: const MaterialApp(
-        debugShowCheckedModeBanner: false,
-        home: AuthWrapper(),
-      ),
+      child: const MyApp(),
     ),
   );
+}
+
+class MyApp extends StatelessWidget {
+  const MyApp({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    // ✅ الاستماع لتغيير اللغة لتحديث الثيم والاتجاه
+    final langCode = context.select<LanguageProvider, String>((p) => p.currentLang);
+
+    return MaterialApp(
+      debugShowCheckedModeBanner: false,
+      title: 'Muslim Way',
+      
+      // ✅ تطبيق الثيم الجديد (الألوان الثلاثة)
+      theme: AppTheme.getTheme(langCode),
+
+      // ✅ إعدادات اللغات (مهم جداً للاتجاه RTL/LTR)
+      locale: Locale(langCode),
+      supportedLocales: const [
+        Locale('ar'), 
+        Locale('en'),
+        Locale('fr'),
+        Locale('da'), // الدارجة
+      ],
+      localizationsDelegates: [
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+      ],
+      
+      // ✅ دالة ذكية: إذا كانت اللغة "الدارجة"، تعامل معها كـ "عربية" في النظام
+      // هذا يحل مشاكل اتجاه النص (RTL) وتنسيق التواريخ
+      localeResolutionCallback: (locale, supportedLocales) {
+        if (locale?.languageCode == 'da') {
+          return const Locale('ar'); 
+        }
+        for (var supportedLocale in supportedLocales) {
+          if (supportedLocale.languageCode == locale?.languageCode) {
+            return supportedLocale;
+          }
+        }
+        return supportedLocales.first;
+      },
+
+      home: const AuthWrapper(),
+    );
+  }
 }

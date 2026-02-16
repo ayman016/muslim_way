@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import 'package:muslim_way/providers/prayer_provider.dart';
 import 'package:muslim_way/providers/user_data_provider.dart';
+import 'package:muslim_way/providers/language_provider.dart'; // ✅
 import 'package:muslim_way/morningazkar.dart';
 import 'package:muslim_way/eveningazkar.dart';
 import 'package:muslim_way/add_task_page.dart';
@@ -20,12 +21,11 @@ class HomeTab extends StatefulWidget {
 class _HomeTabState extends State<HomeTab> with AutomaticKeepAliveClientMixin {
   
   @override
-  bool get wantKeepAlive => true; // 🆕 Keep state alive
+  bool get wantKeepAlive => true; 
 
   @override
   void initState() {
     super.initState();
-    // ✅ Load data once
     WidgetsBinding.instance.addPostFrameCallback((_) {
       context.read<PrayerProvider>().fetchPrayerData();
       context.read<UserDataProvider>().fetchData();
@@ -34,7 +34,7 @@ class _HomeTabState extends State<HomeTab> with AutomaticKeepAliveClientMixin {
 
   @override
   Widget build(BuildContext context) {
-    super.build(context); // Required for AutomaticKeepAliveClientMixin
+    super.build(context); 
 
     return Scaffold(
       backgroundColor: Colors.transparent,
@@ -54,27 +54,35 @@ class _HomeTabState extends State<HomeTab> with AutomaticKeepAliveClientMixin {
           ],
         ),
       ),
-      floatingActionButton: FloatingActionButton(
-        backgroundColor: Colors.amber,
-        onPressed: () => Navigator.push(
-          context,
-          MaterialPageRoute(builder: (_) => const AddTaskPage()),
-        ),
-        child: const Icon(Icons.add_task, color: Colors.black),
-      ),
     );
   }
 }
 
 // ==============================
-// 🆕 Split into separate widgets to reduce rebuilds
+// 🆕 Widgets (Translated & Fixed)
 // ==============================
 
 class _NextPrayerCard extends StatelessWidget {
   const _NextPrayerCard();
 
+  // 🔥 دالة سحرية لترجمة اسم الصلاة القادمة
+  String _getTranslatedPrayerName(String rawName, LanguageProvider lang) {
+    String name = rawName.trim().toLowerCase();
+    
+    if (name.contains('fajr') || name.contains('الفجر')) return lang.t('fajr');
+    if (name.contains('sunrise') || name.contains('shuruq') || name.contains('الشروق')) return lang.t('sunrise');
+    if (name.contains('dhuhr') || name.contains('zuhr') || name.contains('الظهر')) return lang.t('dhuhr');
+    if (name.contains('asr') || name.contains('العصر')) return lang.t('asr');
+    if (name.contains('maghrib') || name.contains('المغرب')) return lang.t('maghrib');
+    if (name.contains('isha') || name.contains('العشاء')) return lang.t('isha');
+    
+    return rawName; // إذا لم تعرفها، أعدها كما هي
+  }
+
   @override
   Widget build(BuildContext context) {
+    final lang = context.watch<LanguageProvider>();
+
     return Selector<PrayerProvider, ({String name, String time})>(
       selector: (_, provider) => (
         name: provider.nextPrayerName,
@@ -97,9 +105,18 @@ class _NextPrayerCard extends StatelessWidget {
             children: [
               Column(
                 children: [
-                  Text("الصلاة القادمة", style: GoogleFonts.cairo(color: Colors.white60)),
-                  Text(data.name, style: GoogleFonts.cairo(color: Colors.white, fontSize: 32, fontWeight: FontWeight.bold)),
-                  Text(data.time, style: GoogleFonts.cairo(color: Colors.amber, fontSize: 20)),
+                  // ✅ استعملنا ترجمة يدوية هنا لأن المفتاح قد لا يكون موجوداً
+                  Text(
+                    lang.currentLang == 'ar' || lang.currentLang == 'da' ? "الصلاة القادمة" : 
+                    (lang.currentLang == 'fr' ? "Prochaine Prière" : "Next Prayer"),
+                    style: GoogleFonts.cairo(color: Colors.white60),
+                  ),
+                  // 🔥 هنا استعملنا الدالة المترجمة
+                  Text(
+                    _getTranslatedPrayerName(data.name, lang), 
+                    style: GoogleFonts.cairo(color: Colors.white, fontSize: 32, fontWeight: FontWeight.bold)
+                  ),
+                  Text(data.time, style: GoogleFonts.cairo(color: Color(0xff00C2CB), fontSize: 20)),
                 ],
               ),
               const Icon(Icons.mosque, size: 70, color: Colors.white24)
@@ -121,18 +138,20 @@ class _PrayerTimesList extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final lang = context.watch<LanguageProvider>();
+
     return Selector<PrayerProvider, PrayerTimes?>(
       selector: (_, provider) => provider.todayPrayerTimes,
       builder: (context, times, child) {
         if (times == null) return const SizedBox.shrink();
 
         final items = [
-          _PrayerItem(name: "الفجر", time: times.fajr),
-          _PrayerItem(name: "الشروق", time: times.sunrise),
-          _PrayerItem(name: "الظهر", time: times.dhuhr),
-          _PrayerItem(name: "العصر", time: times.asr),
-          _PrayerItem(name: "المغرب", time: times.maghrib),
-          _PrayerItem(name: "العشاء", time: times.isha),
+          _PrayerItem(name: lang.t('fajr'), time: times.fajr),
+          _PrayerItem(name: lang.t('sunrise'), time: times.sunrise),
+          _PrayerItem(name: lang.t('dhuhr'), time: times.dhuhr),
+          _PrayerItem(name: lang.t('asr'), time: times.asr),
+          _PrayerItem(name: lang.t('maghrib'), time: times.maghrib),
+          _PrayerItem(name: lang.t('isha'), time: times.isha),
         ];
 
         return SizedBox(
@@ -173,7 +192,7 @@ class _PrayerItem extends StatelessWidget {
           Text(name, style: GoogleFonts.cairo(color: Colors.white70, fontSize: 12)),
           Text(
             DateFormat.jm().format(time),
-            style: GoogleFonts.cairo(color: Colors.amber, fontWeight: FontWeight.bold),
+            style: GoogleFonts.cairo(color:  Color(0xff00C2CB), fontWeight: FontWeight.bold),
           ),
         ],
       ),
@@ -186,11 +205,13 @@ class _TasksSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final lang = context.watch<LanguageProvider>();
+
     return Selector<UserDataProvider, List<String>>(
       selector: (_, provider) => provider.tasks,
       builder: (context, tasks, child) {
         final todayStr = DateFormat('yyyy-MM-dd').format(DateTime.now());
-        final displayTasks = tasks.take(3).toList(); // 🆕 Only show 3
+        final displayTasks = tasks.take(3).toList();
 
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -200,8 +221,10 @@ class _TasksSection extends StatelessWidget {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
+                  // ✅ عنوان المهام (مترجم يدوياً لضمان عدم حدوث خطأ المفتاح المفقود)
                   Text(
-                    "مهامي اليوم 📝",
+                    lang.currentLang == 'ar' || lang.currentLang == 'da' ? "مهامي اليوم 📝" : 
+                    (lang.currentLang == 'fr' ? "Tâches d'aujourd'hui 📝" : "My Tasks Today 📝"),
                     style: GoogleFonts.cairo(
                       color: Colors.white,
                       fontSize: 18,
@@ -210,7 +233,7 @@ class _TasksSection extends StatelessWidget {
                   ),
                   if (tasks.isNotEmpty)
                     Text(
-                      "${tasks.length} مهام",
+                      "${tasks.length} ${lang.t('notes')}", // استعملنا مفتاح notes للمهام
                       style: GoogleFonts.cairo(color: Colors.grey, fontSize: 12),
                     ),
                 ],
@@ -222,7 +245,7 @@ class _TasksSection extends StatelessWidget {
                 child: Padding(
                   padding: const EdgeInsets.all(20),
                   child: Text(
-                    "لا توجد مهام، أضف واحدة!",
+                    lang.t('empty_notes'),
                     style: GoogleFonts.cairo(color: Colors.grey),
                   ),
                 ),
@@ -308,16 +331,21 @@ class _AzkarSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final lang = context.watch<LanguageProvider>();
+
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceEvenly,
       children: [
         _AzkarCard(
-          title: "أذكار الصباح",
+          // ✅ ترجمة مباشرة للعناوين
+          title: lang.currentLang == 'ar' || lang.currentLang == 'da' ? "أذكار الصباح" : 
+                 (lang.currentLang == 'fr' ? "Azkar Matin" : "Morning Azkar"),
           image: "assets/images/morning-azkar.png",
           page: const Morningazkar(),
         ),
         _AzkarCard(
-          title: "أذكار المساء",
+          title: lang.currentLang == 'ar' || lang.currentLang == 'da' ? "أذكار المساء" : 
+                 (lang.currentLang == 'fr' ? "Azkar Soir" : "Evening Azkar"),
           image: "assets/images/evening-azkar.png",
           page: const Eveningazkar(),
         ),

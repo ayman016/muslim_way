@@ -6,6 +6,7 @@ import 'package:intl/intl.dart';
 import 'package:muslim_way/providers/language_provider.dart';
 import 'package:muslim_way/notification_service.dart';
 import 'package:muslim_way/providers/user_data_provider.dart'; 
+import 'package:muslim_way/theme/app_colors.dart'; // ✅ استدعاء الألوان الجديدة
 
 class AddTaskPage extends StatefulWidget {
   final String? taskToEdit; 
@@ -50,12 +51,18 @@ class _AddTaskPageState extends State<AddTaskPage> {
   }
 
   void saveTask() async {
+    final lang = Provider.of<LanguageProvider>(context, listen: false);
+
     if (titleController.text.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("الرجاء إدخال عنوان المهمة", style: GoogleFonts.cairo()), backgroundColor: Colors.red));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(lang.t('task_title_hint'), style: GoogleFonts.cairo(color: Colors.white)), 
+          backgroundColor: Colors.redAccent // أحمر خافت قليلاً
+        )
+      );
       return;
     }
     
-    // ✅ استعمال listen: false باش ما يوقعش Loop
     final provider = Provider.of<UserDataProvider>(context, listen: false);
 
     String createdAt = widget.taskToEdit != null 
@@ -67,7 +74,6 @@ class _AddTaskPageState extends State<AddTaskPage> {
 
     String taskData = "${titleController.text}|$selectedCategoryKey|$isDaily|$createdAt|$reminderString|$notifIdToUse|$lastDoneDate";
     
-    // ✅ هنا كيوقع التحديث والـ notifyListeners كيتطلق
     if (widget.taskToEdit != null && widget.taskIndex != null) {
       await provider.editTask(widget.taskIndex!, taskData);
     } else {
@@ -75,35 +81,56 @@ class _AddTaskPageState extends State<AddTaskPage> {
     }
 
     if (reminderTime != null) {
-      await NotificationService().scheduleNotification(id: int.parse(notifIdToUse), title: "تذكير: ${titleController.text}", body: isDaily ? "🔄 عادة يومية" : "📅 مهمة", scheduledTime: reminderTime!);
+      await NotificationService().scheduleNotification(
+        id: int.parse(notifIdToUse), 
+        title: "${lang.t('set_reminder')}: ${titleController.text}", 
+        body: isDaily ? lang.t('daily_habit') : lang.t('one_time_task'), 
+        scheduledTime: reminderTime!
+      );
     } else if (existingNotifId != null) {
       await NotificationService().cancelNotification(int.parse(existingNotifId!));
     }
     
-    // ✅ فاش كيرجع، HomeTab و StatsPage غايتحدثو حيت فيهم Consumer
     if (mounted) Navigator.pop(context); 
   }
 
-  // ✅ زر الإتمام من داخل صفحة التعديل
-// ✅ زر الإتمام من داخل صفحة التعديل
   void _markAsDone() async {
+    final lang = Provider.of<LanguageProvider>(context, listen: false);
+    
     if (widget.taskIndex != null) {
       final provider = Provider.of<UserDataProvider>(context, listen: false);
       
-      // ✅ تم التصحيح: زدنا حرف 'e' فاللخر
       await provider.markTaskAsDone(widget.taskIndex!); 
       
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text("✅ تم إنجاز المهمة!", style: GoogleFonts.cairo()), backgroundColor: Colors.green)
+          SnackBar(
+            content: Text(lang.t('success_update'), style: GoogleFonts.cairo(color: Colors.white)), 
+            backgroundColor: Colors.green
+          )
         );
-        // Navigator.pop(context);
+        setState(() {
+          lastDoneDate = DateFormat('yyyy-MM-dd').format(DateTime.now());
+        });
       }
     }
   }
 
   Future<void> _pickTime() async {
-    TimeOfDay? picked = await showTimePicker(context: context, initialTime: TimeOfDay.now(), builder: (context, child) => Theme(data: ThemeData.dark().copyWith(colorScheme: const ColorScheme.dark(primary: Colors.amber, surface: Color(0xFF1E1E1E))), child: child!));
+    TimeOfDay? picked = await showTimePicker(
+      context: context, 
+      initialTime: TimeOfDay.now(), 
+      builder: (context, child) => Theme(
+        data: ThemeData.dark().copyWith(
+          colorScheme: const ColorScheme.dark(
+            primary: AppColors.primary, // ✅ Royal Blue picker
+            surface: AppColors.surface, // ✅ Surface picker bg
+            onSurface: Colors.white,
+          )
+        ), 
+        child: child!
+      )
+    );
     if (picked != null) {
       final now = DateTime.now();
       setState(() => reminderTime = DateTime(now.year, now.month, now.day, picked.hour, picked.minute));
@@ -116,62 +143,162 @@ class _AddTaskPageState extends State<AddTaskPage> {
     bool isDoneToday = lastDoneDate == DateFormat('yyyy-MM-dd').format(DateTime.now());
 
     return Scaffold(
-      backgroundColor: Colors.black,
+      // ✅ الخلفية الأساسية (Navy)
+      backgroundColor: AppColors.background,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
-        title: Text(widget.taskToEdit == null ? lang.t('add_task') : "تعديل المهمة", style: GoogleFonts.cairo(color: Colors.white)),
+        elevation: 0,
+        title: Text(
+          widget.taskToEdit == null ? lang.t('add_task') : lang.t('edit_task'), 
+          style: GoogleFonts.cairo(color: Colors.white, fontWeight: FontWeight.bold)
+        ),
         centerTitle: true,
-        iconTheme: const IconThemeData(color: Colors.amber),
+        iconTheme: const IconThemeData(color: Colors.white), // أيقونات بيضاء
         actions: [
           if (widget.taskIndex != null)
-          IconButton(
-  icon: const Icon(Icons.delete, color: Colors.red),
-  onPressed: () {
-    // ✅ بلاصت المسح المباشر، كنعيطو للـ Dialog
-    AwesomeDialog(
-      context: context,
-      dialogType: DialogType.warning, // نوع التحذير (صفر/برتقالي)
-      animType: AnimType.rightSlide,
-      title: 'تأكيد الحذف',
-      desc: 'هل أنت متأكد من حذف هذه المهمة نهائياً؟',
-      btnCancelText: 'إلغاء',
-      btnOkText: 'حذف',
-      btnOkColor: Colors.red, // لون زر الحذف أحمر
-      btnCancelOnPress: () {
-        // ما دير والو، غير سد الـ Dialog
-      },
-      btnOkOnPress: () {
-        // ✅ هنا فين كيمسح بصح
-        Provider.of<UserDataProvider>(context, listen: false).deleteTask(widget.taskIndex!);
-        Navigator.pop(context); // كيرجع للصفحة السابقة (NotesPage)
-      },
-    ).show();
-  },
-)
-            // IconButton(icon: const Icon(Icons.delete, color: Colors.red), onPressed: () { Provider.of<UserDataProvider>(context, listen: false).deleteTask(widget.taskIndex!); Navigator.pop(context); })
+            IconButton(
+              icon: const Icon(Icons.delete, color: Colors.redAccent),
+              onPressed: () {
+                AwesomeDialog(
+                  context: context,
+                  dialogType: DialogType.warning,
+                  dialogBackgroundColor: AppColors.surface, // ✅ لون الخلفية للحوار
+                  animType: AnimType.rightSlide,
+                  title: lang.t('confirm_delete'),
+                  desc: lang.t('delete_task_ask'),
+                  titleTextStyle: GoogleFonts.cairo(color: Colors.white, fontWeight: FontWeight.bold),
+                  descTextStyle: GoogleFonts.cairo(color: Colors.white70),
+                  btnCancelText: lang.t('cancel'),
+                  btnOkText: lang.t('delete'),
+                  btnOkColor: Colors.redAccent,
+                  btnCancelOnPress: () {},
+                  btnOkOnPress: () {
+                    Provider.of<UserDataProvider>(context, listen: false).deleteTask(widget.taskIndex!);
+                    Navigator.pop(context);
+                  },
+                ).show();
+              },
+            )
         ],
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(20.0),
         child: Column(
           children: [
-            TextField(controller: titleController, style: const TextStyle(color: Colors.white, fontSize: 20), decoration: InputDecoration(hintText: lang.t('task_title_hint'), hintStyle: const TextStyle(color: Colors.grey), enabledBorder: const UnderlineInputBorder(borderSide: BorderSide(color: Colors.amber)), focusedBorder: const UnderlineInputBorder(borderSide: BorderSide(color: Colors.amber, width: 2)))),
+            TextField(
+              controller: titleController, 
+              style: const TextStyle(color: Colors.white, fontSize: 20), 
+              decoration: InputDecoration(
+                hintText: lang.t('task_title_hint'), 
+                hintStyle: const TextStyle(color: Colors.grey), 
+                // ✅ Underline بلون Royal Blue
+                enabledBorder: UnderlineInputBorder(borderSide: BorderSide(color: AppColors.primary.withOpacity(0.5))), 
+                focusedBorder: const UnderlineInputBorder(borderSide: BorderSide(color: AppColors.primary, width: 2))
+              )
+            ),
             const SizedBox(height: 30),
             
-            // ✅ زر الإتمام (يظهر عند التعديل)
+            // ✅ زر الإتمام (Styled)
             if (widget.taskIndex != null)
               GestureDetector(
                 onTap: _markAsDone,
-                child: Container(width: double.infinity, padding: const EdgeInsets.all(15), margin: const EdgeInsets.only(bottom: 20), decoration: BoxDecoration(color: isDoneToday ? Colors.green.withOpacity(0.2) : Colors.white10, borderRadius: BorderRadius.circular(15), border: Border.all(color: isDoneToday ? Colors.green : Colors.white24)), child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [Icon(isDoneToday ? Icons.check_circle : Icons.circle_outlined, color: isDoneToday ? Colors.green : Colors.grey), const SizedBox(width: 10), Text(isDoneToday ? "✅ المهمة منجزة اليوم" : "تحديد المهمة كمنجزة", style: GoogleFonts.cairo(color: isDoneToday ? Colors.green : Colors.white))])),
+                child: Container(
+                  width: double.infinity, 
+                  padding: const EdgeInsets.all(15), 
+                  margin: const EdgeInsets.only(bottom: 20), 
+                  decoration: BoxDecoration(
+                    // ✅ أخضر خافت عند الإنجاز، Surface عند الانتظار
+                    color: isDoneToday ? const Color(0xFF1B5E20).withOpacity(0.5) : AppColors.surface, 
+                    borderRadius: BorderRadius.circular(15), 
+                    border: Border.all(color: isDoneToday ? Colors.transparent : AppColors.primary.withOpacity(0.2))
+                  ), 
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center, 
+                    children: [
+                      Icon(
+                        isDoneToday ? Icons.check_circle : Icons.circle_outlined, 
+                        // ✅ أيقونة Cyan عند الانتظار، أخضر عند الإنجاز
+                        color: isDoneToday ? Colors.greenAccent : AppColors.accent
+                      ), 
+                      const SizedBox(width: 10), 
+                      Text(
+                        isDoneToday ? lang.t('task_done_today') : lang.t('mark_as_done'), 
+                        style: GoogleFonts.cairo(color: Colors.white, fontWeight: FontWeight.bold)
+                      )
+                    ]
+                  )
+                ),
               ),
 
-            Container(padding: const EdgeInsets.all(10), decoration: BoxDecoration(color: Colors.white10, borderRadius: BorderRadius.circular(15), border: Border.all(color: isDaily ? Colors.amber : Colors.white10)), child: SwitchListTile(title: Text(lang.t('daily_habit'), style: GoogleFonts.cairo(color: Colors.white)), activeColor: Colors.amber, value: isDaily, onChanged: (val) => setState(() => isDaily = val))),
+            Container(
+              padding: const EdgeInsets.all(5), 
+              decoration: BoxDecoration(
+                color: AppColors.surface, // ✅ Surface bg
+                borderRadius: BorderRadius.circular(15), 
+                border: Border.all(color: isDaily ? AppColors.primary : Colors.transparent)
+              ), 
+              child: SwitchListTile(
+                title: Text(lang.t('daily_habit'), style: GoogleFonts.cairo(color: Colors.white)), 
+                // ✅ Switch بلون Royal Blue
+                activeColor: AppColors.primary, 
+                value: isDaily, 
+                onChanged: (val) => setState(() => isDaily = val)
+              )
+            ),
             const SizedBox(height: 20),
-            ListTile(onTap: _pickTime, tileColor: Colors.white10, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15), side: BorderSide(color: reminderTime != null ? Colors.amber : Colors.transparent)), leading: Icon(Icons.alarm, color: reminderTime != null ? Colors.amber : Colors.grey), title: Text(lang.t('set_reminder'), style: GoogleFonts.cairo(color: Colors.white)), subtitle: reminderTime != null ? Text(DateFormat('HH:mm').format(reminderTime!), style: const TextStyle(color: Colors.amber)) : null, trailing: reminderTime != null ? IconButton(icon: const Icon(Icons.close, color: Colors.red), onPressed: () => setState(() => reminderTime = null)) : null),
+            
+            ListTile(
+              onTap: _pickTime, 
+              tileColor: AppColors.surface, // ✅ Surface bg
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(15), 
+                side: BorderSide(color: reminderTime != null ? AppColors.primary : Colors.transparent)
+              ), 
+              leading: Icon(Icons.alarm, color: reminderTime != null ? AppColors.accent : Colors.grey), 
+              title: Text(lang.t('set_reminder'), style: GoogleFonts.cairo(color: Colors.white)), 
+              subtitle: reminderTime != null ? Text(DateFormat('HH:mm').format(reminderTime!), style: const TextStyle(color: AppColors.accent)) : null, 
+              trailing: reminderTime != null ? IconButton(icon: const Icon(Icons.close, color: Colors.redAccent), onPressed: () => setState(() => reminderTime = null)) : null
+            ),
             const SizedBox(height: 30),
-            Wrap(spacing: 10, children: categoryKeys.map((catKey) => ChoiceChip(label: Text(lang.t(catKey), style: GoogleFonts.cairo(color: selectedCategoryKey == catKey ? Colors.black : Colors.black)), selected: selectedCategoryKey == catKey, selectedColor: Colors.amber, backgroundColor: Colors.grey.withOpacity(0.2), onSelected: (val) => setState(() => selectedCategoryKey = catKey))).toList()),
+            
+            // ✅ الفئات (Styled Chips)
+            Wrap(
+              spacing: 10, 
+              children: categoryKeys.map((catKey) => ChoiceChip(
+                label: Text(
+                  lang.t(catKey), 
+                  style: GoogleFonts.cairo(
+                    color: selectedCategoryKey == catKey ? Colors.white : Colors.white70,
+                    fontWeight: selectedCategoryKey == catKey ? FontWeight.bold : FontWeight.normal
+                  )
+                ), 
+                selected: selectedCategoryKey == catKey, 
+                // ✅ Chip Selected -> Royal Blue
+                selectedColor: AppColors.primary, 
+                backgroundColor: AppColors.surface, 
+                side: BorderSide(color: selectedCategoryKey == catKey ? Colors.transparent : Colors.white10),
+                onSelected: (val) => setState(() => selectedCategoryKey = catKey)
+              )).toList()
+            ),
             const SizedBox(height: 40),
-            SizedBox(width: double.infinity, height: 50, child: ElevatedButton(style: ElevatedButton.styleFrom(backgroundColor: Colors.amber, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15))), onPressed: saveTask, child: Text(lang.t('save'), style: GoogleFonts.cairo(color: Colors.black, fontSize: 18, fontWeight: FontWeight.bold))))
+            
+            SizedBox(
+              width: double.infinity, 
+              height: 50, 
+              child: ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.primary, // ✅ Royal Blue Button
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+                  elevation: 5,
+                  shadowColor: AppColors.primary.withOpacity(0.4),
+                ), 
+                onPressed: saveTask, 
+                child: Text(
+                  lang.t('save'), 
+                  style: GoogleFonts.cairo(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)
+                )
+              )
+            )
           ],
         ),
       ),
