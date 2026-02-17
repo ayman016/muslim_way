@@ -3,7 +3,6 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
-
 import 'package:firebase_core/firebase_core.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:provider/provider.dart';
@@ -15,7 +14,7 @@ import 'package:muslim_way/notification_service.dart';
 import 'package:muslim_way/providers/prayer_provider.dart';
 import 'package:muslim_way/providers/language_provider.dart';
 import 'package:muslim_way/providers/user_data_provider.dart';
-import 'package:muslim_way/theme/app_theme.dart'; // ✅ استدعاء ملف الثيم الجديد
+import 'package:muslim_way/theme/app_theme.dart';
 
 // ✅ Background dispatcher
 @pragma('vm:entry-point')
@@ -76,10 +75,22 @@ void callbackDispatcher() {
   });
 }
 
+// 🔻🔻 دالة جدولة الإشعارات (المعدلة) 🔻🔻
 Future<void> _scheduleTodayPrayers(double lat, double long) async {
   try {
+    // 1. جلب اللغة المحفوظة
+    final prefs = await SharedPreferences.getInstance();
+    final String lang = prefs.getString('app_lang') ?? 'ar';
+
+    // 2. إعداد حسابات الصلاة (تعديل يدوي للمغرب)
     final myCoordinates = Coordinates(lat, long);
+    
+    // ضبط الحساب على توقيت وزارة الأوقاف المغربية
     final params = CalculationMethod.muslim_world_league.getParameters();
+    params.fajrAngle = 19.0; 
+    params.ishaAngle = 17.0; 
+    params.madhab = Madhab.shafi; 
+    
     final prayerTimes = PrayerTimes.today(myCoordinates, params);
 
     final notifService = NotificationService();
@@ -97,13 +108,24 @@ Future<void> _scheduleTodayPrayers(double lat, double long) async {
     for (var prayer in prayers) {
       final prayerTime = prayerTimes.timeForPrayer(prayer);
 
-      if (prayerTime != null && prayerTime.isAfter(now)) {
-        await notifService.scheduleNotification(
-          id: prayer.index + 1000,
-          title: "حان موعد الصلاة 🕌",
-          body: _getPrayerName(prayer),
-          scheduledTime: prayerTime,
-        );
+      if (prayerTime != null) {
+        // 🔥 إنقاص 20 دقيقة من وقت الصلاة
+        final reminderTime = prayerTime.subtract(const Duration(minutes: 20));
+
+        // التحقق أن وقت التذكير لم يمر بعد
+        if (reminderTime.isAfter(now)) {
+          // ✅ جلب النصوص حسب اللغة المختارة
+          String prayerName = _getTranslatedPrayerName(prayer, lang);
+          String title = _getNotifTitle(lang);
+          String body = _getNotifBody(lang, prayerName);
+
+          await notifService.scheduleNotification(
+            id: prayer.index + 1000,
+            title: title, 
+            body: body, 
+            scheduledTime: reminderTime, 
+          );
+        }
       }
     }
   } catch (e) {
@@ -111,22 +133,67 @@ Future<void> _scheduleTodayPrayers(double lat, double long) async {
   }
 }
 
-String _getPrayerName(Prayer prayer) {
-  switch (prayer) {
-    case Prayer.fajr:
-      return "صلاة الفجر - الله أكبر";
-    case Prayer.dhuhr:
-      return "صلاة الظهر - حي على الصلاة";
-    case Prayer.asr:
-      return "صلاة العصر - حي على الفلاح";
-    case Prayer.maghrib:
-      return "صلاة المغرب - الصلاة خير من النوم";
-    case Prayer.isha:
-      return "صلاة العشاء - الله أكبر";
-    default:
-      return "حان موعد الصلاة";
+// ==========================================
+// 🌍 Helper Functions (هادو اللي كانوا ناقصينك)
+// ==========================================
+
+// 1. ترجمة اسم الصلاة
+String _getTranslatedPrayerName(Prayer prayer, String lang) {
+  if (lang == 'ar' || lang == 'da') {
+    switch (prayer) {
+      case Prayer.fajr: return "الفجر";
+      case Prayer.dhuhr: return "الظهر";
+      case Prayer.asr: return "العصر";
+      case Prayer.maghrib: return "المغرب";
+      case Prayer.isha: return "العشاء";
+      default: return "";
+    }
+  } else if (lang == 'fr') {
+    switch (prayer) {
+      case Prayer.fajr: return "Fajr";
+      case Prayer.dhuhr: return "Dhuhr";
+      case Prayer.asr: return "Asr";
+      case Prayer.maghrib: return "Maghrib";
+      case Prayer.isha: return "Isha";
+      default: return "";
+    }
+  } else { // English
+    switch (prayer) {
+      case Prayer.fajr: return "Fajr";
+      case Prayer.dhuhr: return "Dhuhr";
+      case Prayer.asr: return "Asr";
+      case Prayer.maghrib: return "Maghrib";
+      case Prayer.isha: return "Isha";
+      default: return "";
+    }
   }
 }
+
+// 2. عنوان الإشعار حسب اللغة
+String _getNotifTitle(String lang) {
+  switch (lang) {
+    case 'ar': return "اقترب موعد الصلاة ⏳";
+    case 'da': return "قربات الصلاة ⏳"; 
+    case 'fr': return "La prière approche ⏳";
+    case 'en': return "Prayer Approaching ⏳";
+    default: return "Prayer Approaching ⏳";
+  }
+}
+
+// 3. نص الإشعار حسب اللغة
+String _getNotifBody(String lang, String prayerName) {
+  switch (lang) {
+    case 'ar': return "بقي 20 دقيقة على صلاة $prayerName";
+    case 'da': return "بقات 20 دقيقة ل $prayerName";
+    case 'fr': return "20 minutes restantes pour $prayerName";
+    case 'en': return "20 minutes remaining for $prayerName";
+    default: return "20 minutes remaining for $prayerName";
+  }
+}
+
+// ==========================================
+// 🚀 Main Function
+// ==========================================
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -163,7 +230,7 @@ void main() async {
     }
   }
 
-  // 4️⃣ Prayer scheduling
+  // 4️⃣ Prayer scheduling (Initial run)
   try {
     final prefs = await SharedPreferences.getInstance();
     final double? lat = prefs.getDouble('lat');
@@ -228,7 +295,7 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // ✅ الاستماع لتغيير اللغة لتحديث الثيم والاتجاه
+    
     final langCode = context.select<LanguageProvider, String>((p) => p.currentLang);
 
     return MaterialApp(
@@ -238,7 +305,7 @@ class MyApp extends StatelessWidget {
       // ✅ تطبيق الثيم الجديد (الألوان الثلاثة)
       theme: AppTheme.getTheme(langCode),
 
-      // ✅ إعدادات اللغات (مهم جداً للاتجاه RTL/LTR)
+      // ✅ إعدادات اللغات
       locale: Locale(langCode),
       supportedLocales: const [
         Locale('ar'), 
@@ -252,8 +319,6 @@ class MyApp extends StatelessWidget {
         GlobalCupertinoLocalizations.delegate,
       ],
       
-      // ✅ دالة ذكية: إذا كانت اللغة "الدارجة"، تعامل معها كـ "عربية" في النظام
-      // هذا يحل مشاكل اتجاه النص (RTL) وتنسيق التواريخ
       localeResolutionCallback: (locale, supportedLocales) {
         if (locale?.languageCode == 'da') {
           return const Locale('ar'); 

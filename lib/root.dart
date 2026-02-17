@@ -7,7 +7,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:muslim_way/providers/prayer_provider.dart';
 import 'package:muslim_way/providers/user_data_provider.dart';
 import 'package:muslim_way/finance_page.dart';
-import 'package:muslim_way/qiblapart.dart';
+import 'package:muslim_way/qiblapart.dart'; // تأكد أن اسم الملف صحيح
 import 'package:muslim_way/home_tab.dart';
 import 'package:muslim_way/notes_page.dart';
 import 'package:muslim_way/settings_page.dart';
@@ -77,7 +77,6 @@ class _RootState extends State<Root> {
       // ✅ AppBar
       appBar: AppBar(
         iconTheme: const IconThemeData(color: Colors.white),
-        // الخلفية Navy مع شفافية لدمجها مع الخلفية العامة
         backgroundColor: kDeepSlateNavy.withOpacity(0.8),
         centerTitle: true,
         elevation: 0,
@@ -101,36 +100,39 @@ class _RootState extends State<Root> {
                   SnackBar(
                     content: Text(lang.t('update'), style: GoogleFonts.cairo(color: Colors.white)), 
                     duration: const Duration(seconds: 1),
-                    backgroundColor: kRoyalBlue, // خلفية زرقاء قوية للتنبيه
+                    backgroundColor: kRoyalBlue, 
                   )
                 );
               },
               icon: Container(
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  // لمسة Cyan خفيفة جداً للخلفية
                   color: kBrightCyan.withOpacity(0.15),
                   shape: BoxShape.circle
                 ),
-                // الأيقونة Cyan ساطعة
                 child: const Icon(Icons.location_on, color: kBrightCyan, size: 20),
               ),
             )
         ],
       ),
 
-      // استدعاء القائمة الجانبية
+      // ✅ استدعاء القائمة الجانبية
       drawer: const AppDrawer(),
 
       body: Stack(
         children: [
-          // الخلفية العامة
-          Positioned.fill(
-            child: Image.asset(
-              'assets/images/eveningbg.jpg',
-              fit: BoxFit.cover,
-              color: kDeepSlateNavy.withOpacity(0.6), // تغميق الخلفية بـ Navy
-              colorBlendMode: BlendMode.darken,
+          // الخلفية العامة المتدرجة
+          Container(
+            width: double.infinity,
+            height: double.infinity,
+            decoration: BoxDecoration(
+              gradient: LinearGradient(colors: [
+                const Color(0xFF0056D2).withAlpha(90),
+                const Color(0xFF1A202C),
+              ],
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              )
             ),
           ),
           
@@ -149,7 +151,6 @@ class _RootState extends State<Root> {
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 12),
               decoration: BoxDecoration(
-                // الخلفية Navy قوية لتبرز فوق الخلفية العامة
                 color: kDeepSlateNavy.withOpacity(0.95),
                 borderRadius: BorderRadius.circular(40),
                 border: Border.all(color: Colors.white.withOpacity(0.1), width: 0.5),
@@ -202,13 +203,11 @@ class _NavBarItem extends StatelessWidget {
         curve: Curves.easeOutBack,
         padding: EdgeInsets.symmetric(horizontal: isSelected ? 16 : 10, vertical: 8),
         decoration: BoxDecoration(
-          // العنصر النشط يأخذ Royal Blue القوي
           color: isSelected ? kRoyalBlue : Colors.transparent,
           borderRadius: BorderRadius.circular(30),
         ),
         child: Row(
           children: [
-            // الأيقونة غير النشطة رمادية، النشطة بيضاء
             Icon(icon, color: isSelected ? Colors.white : Colors.white60, size: 24),
             if (isSelected) ...[
               const SizedBox(width: 8),
@@ -225,7 +224,7 @@ class _NavBarItem extends StatelessWidget {
 }
 
 // ==========================================
-// ✅ Widget 2: Full Featured App Drawer
+// ✅ Widget 2: Full Featured App Drawer (Fixed Guest Mode)
 // ==========================================
 class AppDrawer extends StatelessWidget {
   const AppDrawer({super.key});
@@ -234,10 +233,10 @@ class AppDrawer extends StatelessWidget {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        backgroundColor: kDeepSlateNavy, // خلفية Dialog
+        backgroundColor: kDeepSlateNavy,
         title: Text(
           context.read<LanguageProvider>().t('lang_title'),
-          style: GoogleFonts.cairo(color: kBrightCyan), // العنوان بـ Cyan
+          style: GoogleFonts.cairo(color: kBrightCyan),
         ),
         content: Column(
           mainAxisSize: MainAxisSize.min,
@@ -258,7 +257,6 @@ class AppDrawer extends StatelessWidget {
       title: Text(
         name,
         style: GoogleFonts.cairo(
-          // النص المختار بـ Cyan، الباقي أبيض
           color: isSelected ? kBrightCyan : Colors.white,
           fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
         ),
@@ -273,7 +271,6 @@ class AppDrawer extends StatelessWidget {
 
   void _logout(BuildContext context) {
     final lang = context.read<LanguageProvider>();
-    
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -311,7 +308,7 @@ class AppDrawer extends StatelessWidget {
     final bool isGuest = user == null;
 
     return Drawer(
-      backgroundColor: kDeepSlateNavy, // خلفية القائمة Navy
+      backgroundColor: kDeepSlateNavy,
       elevation: 0,
       width: MediaQuery.of(context).size.width * 0.75,
       child: Column(
@@ -319,11 +316,11 @@ class AppDrawer extends StatelessWidget {
           // Header
           UserAccountsDrawerHeader(
             decoration: const BoxDecoration(
-              color: kRoyalBlue, // رأس القائمة Royal Blue (قوي)
+              color: kRoyalBlue,
             ),
             currentAccountPicture: CircleAvatar(
               radius: 35,
-              backgroundColor: kDeepSlateNavy, // تباين مع الخلفية الزرقاء
+              backgroundColor: kDeepSlateNavy,
               backgroundImage: user?.photoURL != null ? NetworkImage(user!.photoURL!) : null,
               child: user?.photoURL == null 
                   ? const Icon(Icons.person, size: 40, color: Colors.white) 
@@ -333,11 +330,15 @@ class AppDrawer extends StatelessWidget {
               user?.displayName ?? "Zimam",
               style: GoogleFonts.cairo(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16),
             ),
+            // ✅✅✅ تم استبدال النص الثابت بمتغير الترجمة
             accountEmail: isGuest 
               ? Container(
                   padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                   decoration: BoxDecoration(color: Colors.white.withOpacity(0.2), borderRadius: BorderRadius.circular(20)),
-                  child: Text("Guest Mode", style: GoogleFonts.cairo(color: Colors.white, fontSize: 10)),
+                  child: Text(
+                    lang.t('guest_mode'), // ✅ هنا الترجمة
+                    style: GoogleFonts.cairo(color: Colors.white, fontSize: 10)
+                  ),
                 )
               : Text(user!.email!, style: GoogleFonts.cairo(color: Colors.white70)),
           ),
@@ -352,7 +353,7 @@ class AppDrawer extends StatelessWidget {
                   text: lang.t('qibla'), 
                   onTap: () {
                     Navigator.pop(context);
-                    Navigator.push(context, MaterialPageRoute(builder: (context) => QiblaPage()));
+                    Navigator.push(context, MaterialPageRoute(builder: (context) => const QiblaPage()));
                   }
                 ),
                 _DrawerItem(
@@ -367,7 +368,6 @@ class AppDrawer extends StatelessWidget {
                 _DrawerItem(
                   icon: Icons.language, 
                   text: lang.t('lang_title'), 
-                  // النص الجانبي للغة بـ Bright Cyan
                   trailing: Text(lang.currentLang.toUpperCase(), style: const TextStyle(color: kBrightCyan, fontWeight: FontWeight.bold)),
                   onTap: () => _showLanguageDialog(context),
                 ),
@@ -376,7 +376,7 @@ class AppDrawer extends StatelessWidget {
                 
                 _DrawerItem(
                   icon: Icons.camera_alt_outlined, 
-                  text: 'Instagram', 
+                  text: lang.t('instagram'), 
                   onTap: () async {
                      final Uri url = Uri.parse('https://www.instagram.com/zimam.app?igsh=Z2V5bDd4bGl6OGdp');
                      await launchUrl(url, mode: LaunchMode.externalApplication);
@@ -395,7 +395,7 @@ class AppDrawer extends StatelessWidget {
                   height: 45,
                   child: ElevatedButton.icon(
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: kRoyalBlue, // زر الدخول أزرق
+                      backgroundColor: kRoyalBlue,
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                     ),
                     onPressed: () {
@@ -435,11 +435,9 @@ class _DrawerItem extends StatelessWidget {
         leading: Container(
           padding: const EdgeInsets.all(8),
           decoration: BoxDecoration(
-            // خلفية الأيقونة خفيفة جداً من Cyan
             color: kBrightCyan.withOpacity(0.1), 
             shape: BoxShape.circle
           ),
-          // الأيقونة نفسها Cyan (10% لمسة)
           child: Icon(icon, color: kBrightCyan, size: 22),
         ),
         title: Text(text, style: GoogleFonts.cairo(color: Colors.white, fontSize: 16)),

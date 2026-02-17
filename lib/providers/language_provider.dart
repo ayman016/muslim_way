@@ -9,6 +9,27 @@ class LanguageProvider with ChangeNotifier {
   final Map<String, Map<String, String>> _localizedValues = {
     // 🇸🇦 العربية
     'ar': {
+      'guest_mode': 'وضع زائر',
+      // ✅ الكلمات الناقصة (تمت إضافتها)
+      'general': 'عام',
+      'account': 'الحساب',
+      'version': 'الإصدار',
+      'prayer_reminders': 'التذكير بمواعيد الصلاة',
+
+      // Drawer
+      'qibla': 'القبلة',
+      'instagram': 'انستغرام',
+      'exit': 'خروج',
+
+      // Prayer Names
+      'fajr': 'الفجر',
+      'sunrise': 'الشروق',
+      'dhuhr': 'الظهر',
+      'asr': 'العصر',
+      'maghrib': 'المغرب',
+      'isha': 'العشاء',
+      'next_prayer': 'الصلاة القادمة',
+
       // General
       'settings_title': 'الإعدادات',
       'home': 'الرئيسية',
@@ -57,7 +78,7 @@ class LanguageProvider with ChangeNotifier {
       'edit_balance_desc': 'سيتم تحديث رصيدك وراتبك لهذه القيمة.',
       'success_update': 'تم التحديث بنجاح',
 
-      // Stats UI (جديد)
+      // Stats UI
       'overview': 'نظرة عامة',
       'monthly_budget': 'الميزانية الشهرية',
       'expense_breakdown': 'أين تذهب أموالك؟',
@@ -82,22 +103,46 @@ class LanguageProvider with ChangeNotifier {
       'mark_as_done': 'تحديد المهمة كمنجزة',
       'delete_task_ask': 'هل أنت متأكد من حذف هذه المهمة نهائياً؟',
       'empty_notes': 'لا توجد مهام حالياً',
+      'tasks_title': 'مهامي اليوم',
+      'notes_count': 'مهمة',
       
       // Time
       'today': 'اليوم',
       'yesterday': 'الأمس',
 
+      // Qibla
       'qibla_direction': 'اتجاه القبلة',
-  'enable_gps_msg': 'المرجو تفعيل GPS لتحديد القبلة',
-  'enable_gps': 'تفعيل GPS',
-  'degree_to_kaaba': 'درجة نحو الكعبة',
-  'searching_location': 'جاري البحث عن الموقع...',
-  'device_not_supported': 'جهازك لا يدعم البوصلة',
-  'error': 'خطأ',
+      'enable_gps_msg': 'المرجو تفعيل GPS لتحديد القبلة',
+      'enable_gps': 'تفعيل GPS',
+      'degree_to_kaaba': 'درجة نحو الكعبة',
+      'searching_location': 'جاري البحث عن الموقع...',
+      'device_not_supported': 'جهازك لا يدعم البوصلة',
+      'error': 'خطأ',
     },
     
     // 🇺🇸 English
     'en': {
+      // ✅ Missing Keys Added
+      'general': 'General',
+      'account': 'Account',
+      'version': 'Version',
+      'prayer_reminders': 'Prayer Reminders',
+
+      // Drawer
+      'guest_mode': 'Guest Mode',
+      'qibla': 'Qibla',
+      'instagram': 'Instagram',
+      'exit': 'Exit',
+
+      // Prayer Names
+      'fajr': 'Fajr',
+      'sunrise': 'Sunrise',
+      'dhuhr': 'Dhuhr',
+      'asr': 'Asr',
+      'maghrib': 'Maghrib',
+      'isha': 'Isha',
+      'next_prayer': 'Next Prayer',
+
       // General
       'settings_title': 'Settings',
       'home': 'Home',
@@ -127,15 +172,6 @@ class LanguageProvider with ChangeNotifier {
       'cat_religion': 'Religion',
       'cat_study': 'Study',
       'cat_other': 'Other',
-
-      //qibla 
-      'qibla_direction': 'Qibla Direction',
-  'enable_gps_msg': 'Please enable GPS to find Qibla',
-  'enable_gps': 'Enable GPS',
-  'degree_to_kaaba': 'degrees to Kaaba',
-  'searching_location': 'Searching for location...',
-  'device_not_supported': 'Device not supported',
-  'error': 'Error',
 
       // Finance UI
       'current_balance': 'Current Balance',
@@ -180,14 +216,46 @@ class LanguageProvider with ChangeNotifier {
       'mark_as_done': 'Mark as Done',
       'delete_task_ask': 'Are you sure you want to delete this task?',
       'empty_notes': 'No tasks yet',
+      'tasks_title': 'My Tasks Today',
+      'notes_count': 'Tasks',
       
       // Time
       'today': 'Today',
       'yesterday': 'Yesterday',
+
+      // Qibla
+      'qibla_direction': 'Qibla Direction',
+      'enable_gps_msg': 'Please enable GPS to find Qibla',
+      'enable_gps': 'Enable GPS',
+      'degree_to_kaaba': 'degrees to Kaaba',
+      'searching_location': 'Searching for location...',
+      'device_not_supported': 'Device not supported',
+      'error': 'Error',
     },
 
     // 🇫🇷 Français
     'fr': {
+      // ✅ Missing Keys Added
+      'general': 'Général',
+      'account': 'Compte',
+      'version': 'Version',
+      'prayer_reminders': 'Rappels de Prière',
+
+      // Drawer
+      'guest_mode': 'Mode Invité',
+      'qibla': 'Qibla',
+      'instagram': 'Instagram',
+      'exit': 'Quitter',
+
+      // Prayer Names
+      'fajr': 'Fajr',
+      'sunrise': 'Lever du soleil',
+      'dhuhr': 'Dhuhr',
+      'asr': 'Asr',
+      'maghrib': 'Maghrib',
+      'isha': 'Isha',
+      'next_prayer': 'Prochaine Prière',
+
       // General
       'settings_title': 'Paramètres',
       'home': 'Accueil',
@@ -235,14 +303,6 @@ class LanguageProvider with ChangeNotifier {
       'edit_balance_title': 'Modifier le Solde',
       'edit_balance_desc': 'Votre solde et salaire seront mis à jour.',
       'success_update': 'Mis à jour avec succès',
-      //qibla 
-      'qibla_direction': 'Direction Qibla',
-  'enable_gps_msg': 'Veuillez activer le GPS',
-  'enable_gps': 'Activer GPS',
-  'degree_to_kaaba': 'degrés vers la Kaaba',
-  'searching_location': 'Recherche de position...',
-  'device_not_supported': 'Appareil non supporté',
-  'error': 'Erreur',
 
       // Stats UI
       'overview': 'Aperçu',
@@ -269,6 +329,17 @@ class LanguageProvider with ChangeNotifier {
       'mark_as_done': 'Marquer comme fait',
       'delete_task_ask': 'Supprimer cette tâche définitivement ?',
       'empty_notes': 'Aucune tâche',
+      'tasks_title': 'Tâches d\'aujourd\'hui',
+      'notes_count': 'Notes',
+
+      // Qibla
+      'qibla_direction': 'Direction Qibla',
+      'enable_gps_msg': 'Veuillez activer le GPS',
+      'enable_gps': 'Activer GPS',
+      'degree_to_kaaba': 'degrés vers la Kaaba',
+      'searching_location': 'Recherche de position...',
+      'device_not_supported': 'Appareil non supporté',
+      'error': 'Erreur',
       
       // Time
       'today': 'Aujourd\'hui',
@@ -277,6 +348,27 @@ class LanguageProvider with ChangeNotifier {
 
     // 🇲🇦 الدارجة
     'da': {
+      // ✅ Missing Keys Added
+      'general': 'عام',
+      'account': 'الحساب',
+      'version': 'نسخة',
+      'prayer_reminders': 'تذكير بالصلاة',
+
+      // Drawer
+      'guest_mode': 'زائر',
+      'qibla': 'القبلة',
+      'instagram': 'انستغرام',
+      'exit': 'خروج',
+
+      // Prayer Names
+      'fajr': 'الفجر',
+      'sunrise': 'الشروق',
+      'dhuhr': 'الظهر',
+      'asr': 'العصر',
+      'maghrib': 'المغرب',
+      'isha': 'العشاء',
+      'next_prayer': 'الصلاة الجاية',
+
       // General
       'settings_title': 'الإعدادات',
       'home': 'الرئيسية',
@@ -306,14 +398,6 @@ class LanguageProvider with ChangeNotifier {
       'cat_religion': 'دين',
       'cat_study': 'قراية',
       'cat_other': 'شي حاجة أخرى',
-      //qibla 
-      'qibla_direction': 'اتجاه القبلة',
-  'enable_gps_msg': 'شعل GPS باش تلقى القبلة',
-  'enable_gps': 'شعل GPS',
-  'degree_to_kaaba': 'درجة للكعبة',
-  'searching_location': 'كانقلب على البلاصة...',
-  'device_not_supported': 'تلفونك ما فيهش البوصلة',
-  'error': 'مشكل',
       
       // Finance UI
       'current_balance': 'شحال عندي',
@@ -358,6 +442,17 @@ class LanguageProvider with ChangeNotifier {
       'mark_as_done': 'صافي ساليتها',
       'delete_task_ask': 'واش متأكد باغي تمسحها بمرة؟',
       'empty_notes': 'ما عندك حتى ملاحظة',
+      'tasks_title': 'مهام اليوم',
+      'notes_count': 'ملاحظة',
+
+      // Qibla
+      'qibla_direction': 'اتجاه القبلة',
+      'enable_gps_msg': 'شعل GPS باش تلقى القبلة',
+      'enable_gps': 'شعل GPS',
+      'degree_to_kaaba': 'درجة للكعبة',
+      'searching_location': 'كانقلب على البلاصة...',
+      'device_not_supported': 'تلفونك ما فيهش البوصلة',
+      'error': 'مشكل',
       
       // Time
       'today': 'اليوم',
