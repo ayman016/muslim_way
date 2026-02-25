@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:muslim_way/login_page.dart';
 import 'package:muslim_way/root.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:provider/provider.dart';
+import 'package:muslim_way/providers/user_data_provider.dart';
 
 class AuthWrapper extends StatefulWidget {
   const AuthWrapper({super.key});
@@ -12,38 +14,43 @@ class AuthWrapper extends StatefulWidget {
 }
 
 class _AuthWrapperState extends State<AuthWrapper> {
-  bool? _hasSkippedLogin;
-  bool _isLoading = true;
+  bool _ready = false;
+  bool _shouldGoToRoot = false;
 
   @override
   void initState() {
     super.initState();
-    _checkStatus();
+    _checkAccess();
   }
 
-  Future<void> _checkStatus() async {
+  Future<void> _checkAccess() async {
     final prefs = await SharedPreferences.getInstance();
-    setState(() {
-      _hasSkippedLogin = prefs.getBool('seen_login') ?? false;
-      _isLoading = false;
-    });
+    final seenLogin = prefs.getBool('seen_login') ?? false;
+    final currentUser = FirebaseAuth.instance.currentUser;
+
+    if (mounted) {
+      setState(() {
+        // يدخل لـ Root إذا كان مسجل أو ضغط على "تخطي" من قبل
+        _shouldGoToRoot = (currentUser != null || seenLogin);
+        _ready = true;
+      });
+
+      // جلب البيانات فوراً في الخلفية
+      if (_shouldGoToRoot) {
+        context.read<UserDataProvider>().fetchData();
+      }
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    if (_isLoading) {
+    if (!_ready) {
       return const Scaffold(
         backgroundColor: Colors.black,
         body: Center(child: CircularProgressIndicator(color: Colors.amber)),
       );
     }
 
-    final user = FirebaseAuth.instance.currentUser;
-
-    if (user != null || _hasSkippedLogin == true) {
-      return const Root();
-    }
-
-    return const LoginPage();
+    return _shouldGoToRoot ? const Root() : const LoginPage();
   }
 }

@@ -47,26 +47,23 @@ dependencies:
   
   flutter_localizations:
     sdk: flutter
-  flutter_native_splash: ^2.4.7
-  flutter_launcher_icons: ^0.14.4
+  connectivity_plus: ^7.0.0
+  firebase_messaging: ^16.1.1
+  
+  # نحيدو هادو إلا ما بقيناش باغينهم
+  # flutter_native_splash: ^2.4.7 
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^6.0.0
+  flutter_launcher_icons: ^0.13.1 
 
 flutter_launcher_icons:
-  android: true
+  android: "launcher_icon"
   ios: false
-  image_path: "assets/images/logo.png"
-  adaptive_icon_background: "#1A202C"
-  adaptive_icon_foreground: "assets/images/logo.png"
-  # adaptive_icon_foreground_scale: 0.65
-  min_sdk_android: 21
-  web:
-    generate: false
-  windows:
-    generate: false
+  image_path: "assets/images/app-icon.png"
+  min_sdk_android: 21 
 
 flutter:
   uses-material-design: true
@@ -74,3 +71,16 @@ flutter:
   assets:
     - assets/images/
     - assets/animation/
+    - assets/fonts/ # ✅ ضروري تزيد هاد السطر
+
+  # ✅ تعريف الخطوط الجديدة
+  fonts:
+    - family: IBMPlexSans
+      fonts:
+        - asset: assets/fonts/IBMPlexSans-VariableFont_wdth,wght.ttf
+    
+    - family: IBMPlexSansArabic
+      fonts:
+        - asset: assets/fonts/IBMPlexSansArabic-Regular.ttf
+        - asset: assets/fonts/IBMPlexSansArabic-Medium.ttf
+          weight: 500

@@ -1,45 +1,46 @@
-import 'dart:io';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
-import 'package:permission_handler/permission_handler.dart';
 import 'package:provider/provider.dart';
 import 'package:workmanager/workmanager.dart';
 import 'package:adhan/adhan.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:url_launcher/url_launcher.dart';
+import 'package:awesome_dialog/awesome_dialog.dart';
+
+import 'package:muslim_way/firebase_options.dart'; 
 import 'package:muslim_way/auth_wrapper.dart';
+import 'package:muslim_way/introduction_screen.dart';
 import 'package:muslim_way/notification_service.dart';
 import 'package:muslim_way/providers/prayer_provider.dart';
 import 'package:muslim_way/providers/language_provider.dart';
 import 'package:muslim_way/providers/user_data_provider.dart';
 import 'package:muslim_way/theme/app_theme.dart';
+import 'package:muslim_way/theme/app_colors.dart';
+import 'package:muslim_way/theme/app_fonts.dart';
 
-// ✅ Background dispatcher
+final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
+
 @pragma('vm:entry-point')
 void callbackDispatcher() {
   Workmanager().executeTask((task, inputData) async {
     try {
       debugPrint("🔔 Workmanager task: $task");
-
       final prefs = await SharedPreferences.getInstance();
 
-      // Task reminders check
       if (task == "taskRemindersChecker") {
         final savedTasks = prefs.getStringList('cached_tasks');
-
         if (savedTasks != null && savedTasks.isNotEmpty) {
           final now = DateTime.now();
-
           for (var taskData in savedTasks) {
             final parts = taskData.split('|');
-
             if (parts.length >= 5 && parts[4] != "null") {
               try {
                 final reminderTime = DateTime.parse(parts[4]);
                 final difference = now.difference(reminderTime).abs();
-
                 if (difference.inMinutes <= 5 &&
                     reminderTime.isBefore(now.add(const Duration(minutes: 1)))) {
                   final notif = NotificationService();
@@ -57,11 +58,9 @@ void callbackDispatcher() {
         }
       }
 
-      // Prayer time check
       if (task == "prayerTimeChecker") {
         final double? lat = prefs.getDouble('lat');
         final double? long = prefs.getDouble('long');
-
         if (lat != null && long != null) {
           await _scheduleTodayPrayers(lat, long);
         }
@@ -75,57 +74,41 @@ void callbackDispatcher() {
   });
 }
 
-// 🔻🔻 دالة جدولة الإشعارات (المعدلة) 🔻🔻
 Future<void> _scheduleTodayPrayers(double lat, double long) async {
   try {
-    // 1. جلب اللغة المحفوظة
     final prefs = await SharedPreferences.getInstance();
     final String lang = prefs.getString('app_lang') ?? 'ar';
-
-    // 2. إعداد حسابات الصلاة (تعديل يدوي للمغرب)
     final myCoordinates = Coordinates(lat, long);
-    
-    // ضبط الحساب على توقيت وزارة الأوقاف المغربية
     final params = CalculationMethod.muslim_world_league.getParameters();
-    params.fajrAngle = 19.0; 
-    params.ishaAngle = 17.0; 
-    params.madhab = Madhab.shafi; 
-    
+    params.fajrAngle = 19.0;
+    params.ishaAngle = 17.0;
+    params.madhab = Madhab.shafi;
     final prayerTimes = PrayerTimes.today(myCoordinates, params);
-
     final notifService = NotificationService();
     await notifService.init();
-
     final now = DateTime.now();
-    final prayers = [
-      Prayer.fajr,
-      Prayer.dhuhr,
-      Prayer.asr,
-      Prayer.maghrib,
-      Prayer.isha,
-    ];
+    final prayers = [Prayer.fajr, Prayer.dhuhr, Prayer.asr, Prayer.maghrib, Prayer.isha];
 
     for (var prayer in prayers) {
       final prayerTime = prayerTimes.timeForPrayer(prayer);
-
-      if (prayerTime != null) {
-        // 🔥 إنقاص 20 دقيقة من وقت الصلاة
-        final reminderTime = prayerTime.subtract(const Duration(minutes: 20));
-
-        // التحقق أن وقت التذكير لم يمر بعد
-        if (reminderTime.isAfter(now)) {
-          // ✅ جلب النصوص حسب اللغة المختارة
-          String prayerName = _getTranslatedPrayerName(prayer, lang);
-          String title = _getNotifTitle(lang);
-          String body = _getNotifBody(lang, prayerName);
-
-          await notifService.scheduleNotification(
-            id: prayer.index + 1000,
-            title: title, 
-            body: body, 
-            scheduledTime: reminderTime, 
-          );
-        }
+      if (prayerTime == null) continue;
+      final String prayerName = _getTranslatedPrayerName(prayer, lang);
+      final reminderTime = prayerTime.subtract(const Duration(minutes: 20));
+      if (reminderTime.isAfter(now)) {
+        await notifService.scheduleNotification(
+          id: prayer.index + 1000,
+          title: _getNotifTitle(lang),
+          body: _getNotifBody(lang, prayerName),
+          scheduledTime: reminderTime,
+        );
+      }
+      if (prayerTime.isAfter(now)) {
+        await notifService.scheduleNotification(
+          id: prayer.index + 2000,
+          title: _getAdhanTitle(lang, prayerName),
+          body: _getAdhanBody(lang, prayerName),
+          scheduledTime: prayerTime,
+        );
       }
     }
   } catch (e) {
@@ -133,85 +116,149 @@ Future<void> _scheduleTodayPrayers(double lat, double long) async {
   }
 }
 
-// ==========================================
-// 🌍 Helper Functions (هادو اللي كانوا ناقصينك)
-// ==========================================
+String _getAdhanTitle(String lang, String prayerName) {
+  switch (lang) {
+    case 'ar': return "حان وقت صلاة $prayerName 🕌";
+    case 'da': return "جاء وقت صلاة $prayerName 🕌";
+    case 'fr': return "L'heure de $prayerName est arrivée 🕌";
+    default:   return "Time for $prayerName Prayer 🕌";
+  }
+}
 
-// 1. ترجمة اسم الصلاة
+String _getAdhanBody(String lang, String prayerName) {
+  switch (lang) {
+    case 'ar': return "الله أكبر — حان موعد صلاة $prayerName";
+    case 'da': return "الله أكبر — وقت صلاة $prayerName دبا";
+    case 'fr': return "Allahu Akbar — C'est l'heure de $prayerName";
+    default:   return "Allahu Akbar — $prayerName prayer time has begun";
+  }
+}
+
 String _getTranslatedPrayerName(Prayer prayer, String lang) {
   if (lang == 'ar' || lang == 'da') {
     switch (prayer) {
-      case Prayer.fajr: return "الفجر";
-      case Prayer.dhuhr: return "الظهر";
-      case Prayer.asr: return "العصر";
+      case Prayer.fajr:    return "الفجر";
+      case Prayer.dhuhr:   return "الظهر";
+      case Prayer.asr:     return "العصر";
       case Prayer.maghrib: return "المغرب";
-      case Prayer.isha: return "العشاء";
-      default: return "";
+      case Prayer.isha:    return "العشاء";
+      default:             return "";
     }
-  } else if (lang == 'fr') {
-    switch (prayer) {
-      case Prayer.fajr: return "Fajr";
-      case Prayer.dhuhr: return "Dhuhr";
-      case Prayer.asr: return "Asr";
-      case Prayer.maghrib: return "Maghrib";
-      case Prayer.isha: return "Isha";
-      default: return "";
-    }
-  } else { // English
-    switch (prayer) {
-      case Prayer.fajr: return "Fajr";
-      case Prayer.dhuhr: return "Dhuhr";
-      case Prayer.asr: return "Asr";
-      case Prayer.maghrib: return "Maghrib";
-      case Prayer.isha: return "Isha";
-      default: return "";
-    }
+  }
+  switch (prayer) {
+    case Prayer.fajr:    return "Fajr";
+    case Prayer.dhuhr:   return "Dhuhr";
+    case Prayer.asr:     return "Asr";
+    case Prayer.maghrib: return "Maghrib";
+    case Prayer.isha:    return "Isha";
+    default:             return "";
   }
 }
 
-// 2. عنوان الإشعار حسب اللغة
 String _getNotifTitle(String lang) {
   switch (lang) {
     case 'ar': return "اقترب موعد الصلاة ⏳";
-    case 'da': return "قربات الصلاة ⏳"; 
+    case 'da': return "قربات الصلاة ⏳";
     case 'fr': return "La prière approche ⏳";
-    case 'en': return "Prayer Approaching ⏳";
-    default: return "Prayer Approaching ⏳";
+    default:   return "Prayer Approaching ⏳";
   }
 }
 
-// 3. نص الإشعار حسب اللغة
 String _getNotifBody(String lang, String prayerName) {
   switch (lang) {
     case 'ar': return "بقي 20 دقيقة على صلاة $prayerName";
     case 'da': return "بقات 20 دقيقة ل $prayerName";
     case 'fr': return "20 minutes restantes pour $prayerName";
-    case 'en': return "20 minutes remaining for $prayerName";
-    default: return "20 minutes remaining for $prayerName";
+    default:   return "20 minutes remaining for $prayerName";
   }
 }
 
-// ==========================================
-// 🚀 Main Function
-// ==========================================
+void _handleNotificationClick(RemoteMessage message) async {
+  if (message.data.containsKey('link')) {
+    final String urlStr = message.data['link'];
+    final Uri url = Uri.parse(urlStr);
+    if (await canLaunchUrl(url)) {
+      await launchUrl(url, mode: LaunchMode.externalApplication);
+    } else {
+      debugPrint("❌ Could not launch $urlStr");
+    }
+  }
+}
+
+void _initFirebaseMessagingInBackground() async {
+  try {
+    FirebaseMessaging messaging = FirebaseMessaging.instance;
+    await messaging.requestPermission();
+    await messaging.subscribeToTopic('all_users');
+
+    RemoteMessage? initialMessage = await messaging.getInitialMessage();
+    if (initialMessage != null) {
+      _handleNotificationClick(initialMessage);
+    }
+
+    FirebaseMessaging.onMessageOpenedApp.listen(_handleNotificationClick);
+
+    FirebaseMessaging.onMessage.listen((RemoteMessage message) {
+      if (message.notification != null) {
+        final context = navigatorKey.currentContext;
+        if (context != null) {
+          AwesomeDialog(
+            context: context,
+            dialogType: DialogType.infoReverse,
+            animType: AnimType.bottomSlide,
+            dialogBackgroundColor: AppColors.surface,
+            title: message.notification!.title ?? "رسالة جديدة",
+            desc: message.notification!.body ?? "",
+            // ✅ استخدام AppFonts.mainStyle لتجنب الـ Crash وضمان العمل Offline
+            titleTextStyle: AppFonts.mainStyle(
+              context: context,
+              listen: false,
+              color: Colors.white,
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
+            ),
+            descTextStyle: AppFonts.mainStyle(
+              context: context,
+              listen: false,
+              color: Colors.white70,
+              fontSize: 15,
+            ),
+            btnOkText: 'حسناً',
+            btnOkColor: AppColors.accent,
+            btnOkOnPress: () {
+              _handleNotificationClick(message);
+            },
+          ).show();
+        }
+      }
+    });
+  } catch (e) {
+    debugPrint("⚠️ FCM Init Warning (Likely Offline): $e");
+  }
+}
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await initializeDateFormatting('ar', null);
 
-  // 1️⃣ Firebase
   try {
-    await Firebase.initializeApp();
+    await Firebase.initializeApp(
+      options: DefaultFirebaseOptions.currentPlatform,
+    );
+
     FirebaseFirestore.instance.settings = const Settings(
       persistenceEnabled: true,
       cacheSizeBytes: Settings.CACHE_SIZE_UNLIMITED,
     );
-    debugPrint("✅ Firebase initialized");
+
+    debugPrint("✅ Firebase initialized with offline persistence");
+
+    _initFirebaseMessagingInBackground();
+
   } catch (e) {
     debugPrint("❌ Firebase error: $e");
   }
 
-  // 2️⃣ Notifications
   try {
     await NotificationService().init();
     await NotificationService().requestPermissions();
@@ -221,21 +268,10 @@ void main() async {
     debugPrint("❌ Notification error: $e");
   }
 
-  // 3️⃣ Battery optimization
-  if (Platform.isAndroid) {
-    try {
-      await Permission.ignoreBatteryOptimizations.request();
-    } catch (e) {
-      debugPrint("⚠️ Battery optimization: $e");
-    }
-  }
-
-  // 4️⃣ Prayer scheduling (Initial run)
   try {
     final prefs = await SharedPreferences.getInstance();
     final double? lat = prefs.getDouble('lat');
     final double? long = prefs.getDouble('long');
-
     if (lat != null && long != null) {
       await _scheduleTodayPrayers(lat, long);
     }
@@ -243,10 +279,8 @@ void main() async {
     debugPrint("❌ Prayer init error: $e");
   }
 
-  // 5️⃣ Workmanager
   try {
     await Workmanager().initialize(callbackDispatcher, isInDebugMode: false);
-
     await Workmanager().registerPeriodicTask(
       "prayerTimeChecker",
       "prayerTimeChecker",
@@ -257,7 +291,6 @@ void main() async {
         requiresCharging: false,
       ),
     );
-
     await Workmanager().registerPeriodicTask(
       "taskRemindersChecker",
       "taskRemindersChecker",
@@ -267,17 +300,14 @@ void main() async {
         requiresBatteryNotLow: false,
       ),
     );
-
     debugPrint("✅ Workmanager initialized");
   } catch (e) {
     debugPrint("❌ Workmanager error: $e");
   }
 
-  // 6️⃣ Language Setup
   final languageProvider = LanguageProvider();
   await languageProvider.loadLanguage();
 
-  // 🚀 Run app
   runApp(
     MultiProvider(
       providers: [
@@ -295,43 +325,61 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    
     final langCode = context.select<LanguageProvider, String>((p) => p.currentLang);
 
     return MaterialApp(
+      navigatorKey: navigatorKey,
       debugShowCheckedModeBanner: false,
-      title: 'Muslim Way',
-      
-      // ✅ تطبيق الثيم الجديد (الألوان الثلاثة)
+      title: 'Zimam',
       theme: AppTheme.getTheme(langCode),
-
-      // ✅ إعدادات اللغات
-      locale: Locale(langCode),
+      locale: Locale(langCode == 'da' ? 'ar' : langCode),
       supportedLocales: const [
-        Locale('ar'), 
+        Locale('ar'),
         Locale('en'),
         Locale('fr'),
-        Locale('da'), // الدارجة
       ],
-      localizationsDelegates: [
+      localizationsDelegates: const [
         GlobalMaterialLocalizations.delegate,
         GlobalWidgetsLocalizations.delegate,
         GlobalCupertinoLocalizations.delegate,
       ],
-      
-      localeResolutionCallback: (locale, supportedLocales) {
-        if (locale?.languageCode == 'da') {
-          return const Locale('ar'); 
-        }
-        for (var supportedLocale in supportedLocales) {
-          if (supportedLocale.languageCode == locale?.languageCode) {
-            return supportedLocale;
-          }
-        }
-        return supportedLocales.first;
-      },
-
-      home: const AuthWrapper(),
+      home: const _HomeRouter(),
     );
+  }
+}
+
+class _HomeRouter extends StatefulWidget {
+  const _HomeRouter();
+
+  @override
+  State<_HomeRouter> createState() => _HomeRouterState();
+}
+
+class _HomeRouterState extends State<_HomeRouter> {
+  bool? _introDone;
+
+  @override
+  void initState() {
+    super.initState();
+    _checkIntro();
+  }
+
+  Future<void> _checkIntro() async {
+    final prefs = await SharedPreferences.getInstance();
+    final done = prefs.getBool('intro_done') ?? false;
+    if (mounted) setState(() => _introDone = done);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_introDone == null) {
+      return const Scaffold(
+        backgroundColor: Colors.black,
+        body: Center(
+          child: CircularProgressIndicator(color: AppColors.primary),
+        ),
+      );
+    }
+    return _introDone! ? const AuthWrapper() : const IntroductionScreen();
   }
 }

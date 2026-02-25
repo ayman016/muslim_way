@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
-import 'package:muslim_way/providers/user_data_provider.dart';
-import 'package:muslim_way/providers/language_provider.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
-import 'package:lottie/lottie.dart'; 
-import 'package:muslim_way/theme/app_colors.dart'; // ✅ استدعاء الألوان الجديدة
+import 'package:lottie/lottie.dart';
+import 'package:muslim_way/providers/language_provider.dart';
+import 'package:muslim_way/providers/user_data_provider.dart';
+import 'package:muslim_way/theme/app_colors.dart';
+import 'package:muslim_way/theme/app_fonts.dart';
 
 class StatsPage extends StatefulWidget {
   const StatsPage({super.key});
@@ -16,16 +16,14 @@ class StatsPage extends StatefulWidget {
 
 class _StatsPageState extends State<StatsPage>
     with SingleTickerProviderStateMixin, AutomaticKeepAliveClientMixin {
-  
+
   @override
-  bool get wantKeepAlive => true; 
+  bool get wantKeepAlive => true;
 
   @override
   Widget build(BuildContext context) {
-    super.build(context); 
+    super.build(context);
     final lang = context.watch<LanguageProvider>();
-
-    // ✅ إصلاح التاريخ للدارجة
     final String dateLocale = lang.currentLang == 'da' ? 'ar' : lang.currentLang;
 
     return Scaffold(
@@ -33,67 +31,83 @@ class _StatsPageState extends State<StatsPage>
       body: SafeArea(
         child: SingleChildScrollView(
           physics: const BouncingScrollPhysics(),
-          padding: const EdgeInsets.only(top: 20, left: 20, right: 20, bottom: 100),
+          padding: const EdgeInsets.only(top: 20, left: 18, right: 18, bottom: 100),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              
               const SizedBox(height: 10),
 
-              // Header
+              // ── Header ──────────────────────────────
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        "${lang.t('overview')} 📊",
-                        style: GoogleFonts.cairo(
+                        lang.t('overview'),
+                        style: AppFonts.mainStyle(
+                          context: context,
                           color: Colors.white,
-                          fontSize: 26,
+                          fontSize: 28,
                           fontWeight: FontWeight.bold,
                         ),
                       ),
+                      const SizedBox(height: 3),
                       Text(
                         DateFormat('MMMM yyyy', dateLocale).format(DateTime.now()),
-                        style: GoogleFonts.cairo(
-                          color: Colors.white54,
-                          fontSize: 14,
-                          fontWeight: FontWeight.w500
+                        style: AppFonts.mainStyle(
+                          context: context,
+                          color: Colors.white38,
+                          fontSize: 13,
+                          fontWeight: FontWeight.w500,
                         ),
                       ),
                     ],
                   ),
                   Container(
-                    padding: const EdgeInsets.all(10),
+                    padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
-                      color: AppColors.surface.withOpacity(0.5), // ✅ Surface
-                      shape: BoxShape.circle,
-                      border: Border.all(color: AppColors.primary.withOpacity(0.3)), // ✅ Royal Blue border
+                      gradient: LinearGradient(
+                        colors: [
+                          AppColors.primary.withOpacity(0.5),
+                          AppColors.surface,
+                        ],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: AppColors.accent.withOpacity(0.25), width: 1),
+                      boxShadow: [
+                        BoxShadow(
+                          color: AppColors.primary.withOpacity(0.2),
+                          blurRadius: 12,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
                     ),
-                    child: const Icon(Icons.bar_chart_rounded, color: AppColors.accent), // ✅ Cyan icon
-                  )
+                    child: Icon(Icons.bar_chart_rounded, color: AppColors.accent, size: 22),
+                  ),
                 ],
               ),
-              
-              // Animation
+
+              // ── GIF ─────────────────────────────────
               Center(
                 child: SizedBox(
-                  height: 130, 
+                  height: 120,
                   child: Image.asset(
                     'assets/animation/be.gif',
                     fit: BoxFit.contain,
                   ),
                 ),
               ),
-              
-              const SizedBox(height: 30),
 
+              const SizedBox(height: 28),
               const _BudgetSection(),
-              const SizedBox(height: 30),
+              const SizedBox(height: 28),
               const _ExpenseBreakdownSection(),
-              const SizedBox(height: 30),
+              const SizedBox(height: 28),
               const _TasksSection(),
             ],
           ),
@@ -103,9 +117,9 @@ class _StatsPageState extends State<StatsPage>
   }
 }
 
-// ==========================================
-// 1️⃣ Budget Section Widget (Styled)
-// ==========================================
+// ============================================================
+// 1️⃣ Budget Section — Redesigned
+// ============================================================
 class _BudgetSection extends StatelessWidget {
   const _BudgetSection();
 
@@ -116,18 +130,13 @@ class _BudgetSection extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Padding(
-          padding: const EdgeInsets.only(bottom: 10),
-          child: Text(
-            lang.t('monthly_budget'),
-            style: GoogleFonts.cairo(
-              color: Colors.white,
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
+        _SectionHeader(
+          icon: Icons.account_balance_wallet_rounded,
+          iconColor: AppColors.accent,
+          label: lang.t('monthly_budget'),
         ),
-        
+        const SizedBox(height: 14),
+
         Selector<UserDataProvider, ({double salary, List<String> transactions})>(
           selector: (_, provider) => (
             salary: provider.salary,
@@ -153,17 +162,19 @@ class _BudgetSection extends StatelessWidget {
             }
 
             final spentPercentage = data.salary > 0 ? (totalExpenses / data.salary) : 0.0;
-            
-            // ✅ ألوان الميزانية الجديدة
-            final budgetColor = spentPercentage > 1.0 
-                ? const Color(0xFFFF5252) // أحمر للخطر
-                : (spentPercentage > 0.8 ? const Color(0xFFFFAB40) : AppColors.accent); // Cyan للحالة الجيدة
 
-            final currencyFormat = NumberFormat("#,##0", lang.currentLang == 'ar' || lang.currentLang == 'da' ? "ar" : "en_US");
+            final budgetColor = spentPercentage > 1.0
+                ? const Color(0xFFFF5252)
+                : (spentPercentage > 0.8 ? const Color(0xFFFFAB40) : AppColors.accent);
+
+            final currencyFormat = NumberFormat(
+              "#,##0",
+              lang.currentLang == 'ar' || lang.currentLang == 'da' ? "ar" : "en_US",
+            );
 
             String statusText;
             IconData statusIcon;
-            
+
             if (spentPercentage > 1.0) {
               statusText = "${lang.t('spent_ratio')} ${(spentPercentage * 100).toStringAsFixed(0)}%";
               statusIcon = Icons.warning_amber_rounded;
@@ -174,67 +185,99 @@ class _BudgetSection extends StatelessWidget {
 
             if (data.salary > 0) {
               return Container(
-                padding: const EdgeInsets.all(20),
+                padding: const EdgeInsets.all(22),
                 decoration: BoxDecoration(
-                  // ✅ خلفية متدرجة خفيفة بلمسة Navy
                   gradient: LinearGradient(
-                    colors: [AppColors.surface, AppColors.background],
+                    colors: [
+                      AppColors.surface,
+                      AppColors.background.withOpacity(0.8),
+                    ],
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
                   ),
-                  borderRadius: BorderRadius.circular(24),
-                  border: Border.all(color: AppColors.primary.withOpacity(0.3)),
+                  borderRadius: BorderRadius.circular(26),
+                  border: Border.all(color: AppColors.primary.withOpacity(0.25), width: 1),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withOpacity(0.3),
-                      blurRadius: 15,
-                      offset: const Offset(0, 5),
-                    )
+                      color: Colors.black.withOpacity(0.25),
+                      blurRadius: 18,
+                      offset: const Offset(0, 6),
+                    ),
                   ],
                 ),
                 child: Column(
                   children: [
+                    // Income / Expense cards side by side
                     Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                         _buildFinanceItem(lang.t('income'), data.salary, AppColors.accent, currencyFormat), // ✅ Dakhil Cyan
-                         Container(height: 40, width: 1, color: Colors.white10),
-                         _buildFinanceItem(lang.t('expense'), totalExpenses, const Color(0xFFFF5252), currencyFormat), // Masrouf Red
-                      ],
-                    ),
-                    const SizedBox(height: 20),
-                    
-                    Stack(
-                      children: [
-                        Container(
-                          height: 12,
-                          decoration: BoxDecoration(
-                            color: Colors.black26,
-                            borderRadius: BorderRadius.circular(20),
+                        Expanded(
+                          child: _FinanceMiniCard(
+                            label: lang.t('income'),
+                            amount: data.salary,
+                            color: AppColors.accent,
+                            icon: Icons.arrow_downward_rounded,
+                            currencyFormat: currencyFormat,
                           ),
                         ),
-                        FractionallySizedBox(
-                          widthFactor: spentPercentage > 1 ? 1 : spentPercentage,
-                          child: Container(
-                            height: 12,
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: _FinanceMiniCard(
+                            label: lang.t('expense'),
+                            amount: totalExpenses,
+                            color: const Color(0xFFFF5252),
+                            icon: Icons.arrow_upward_rounded,
+                            currencyFormat: currencyFormat,
+                          ),
+                        ),
+                      ],
+                    ),
+
+                    const SizedBox(height: 20),
+
+                    // Progress bar
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(20),
+                      child: Stack(
+                        children: [
+                          Container(
+                            height: 10,
                             decoration: BoxDecoration(
-                              gradient: LinearGradient(colors: [budgetColor.withOpacity(0.7), budgetColor]),
+                              color: Colors.white.withOpacity(0.07),
                               borderRadius: BorderRadius.circular(20),
-                              boxShadow: [BoxShadow(color: budgetColor.withOpacity(0.4), blurRadius: 8, offset: const Offset(0, 2))],
                             ),
                           ),
-                        ),
-                      ],
+                          FractionallySizedBox(
+                            widthFactor: spentPercentage > 1 ? 1 : spentPercentage,
+                            child: Container(
+                              height: 10,
+                              decoration: BoxDecoration(
+                                gradient: LinearGradient(
+                                  colors: [budgetColor.withOpacity(0.6), budgetColor],
+                                ),
+                                borderRadius: BorderRadius.circular(20),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: budgetColor.withOpacity(0.45),
+                                    blurRadius: 8,
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
-                    const SizedBox(height: 15),
-                    
+
+                    const SizedBox(height: 14),
+
                     Row(
                       children: [
-                        Icon(statusIcon, color: budgetColor, size: 16),
-                        const SizedBox(width: 8),
+                        Icon(statusIcon, color: budgetColor, size: 15),
+                        const SizedBox(width: 7),
                         Text(
                           statusText,
-                          style: GoogleFonts.cairo(
+                          style: AppFonts.mainStyle(
+                            context: context,
                             color: budgetColor,
                             fontSize: 13,
                             fontWeight: FontWeight.bold,
@@ -246,37 +289,102 @@ class _BudgetSection extends StatelessWidget {
                 ),
               );
             } else {
-              return _buildEmptyState(lang.t('salary_not_set'));
+              return _buildEmptyState(context, lang.t('salary_not_set'));
             }
           },
         ),
       ],
     );
   }
+}
 
-  Widget _buildFinanceItem(String label, double amount, Color color, NumberFormat fmt) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(label, style: GoogleFonts.cairo(color: Colors.white38, fontSize: 12)),
-        const SizedBox(height: 4),
-        Row(
-          children: [
-            Text(
-              fmt.format(amount),
-              style: GoogleFonts.cairo(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
+// Mini finance card widget
+class _FinanceMiniCard extends StatelessWidget {
+  final String label;
+  final double amount;
+  final Color color;
+  final IconData icon;
+  final NumberFormat currencyFormat;
+
+  const _FinanceMiniCard({
+    required this.label,
+    required this.amount,
+    required this.color,
+    required this.icon,
+    required this.currencyFormat,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.07),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: color.withOpacity(0.2), width: 1),
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(6),
+            decoration: BoxDecoration(
+              color: color.withOpacity(0.15),
+              borderRadius: BorderRadius.circular(10),
             ),
-            Text(" DH", style: GoogleFonts.cairo(color: color, fontSize: 12, fontWeight: FontWeight.bold)),
-          ],
-        )
-      ],
+            child: Icon(icon, color: color, size: 14),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  label,
+                  style: AppFonts.mainStyle(
+                    context: context,
+                    color: Colors.white38,
+                    fontSize: 11,
+                  ),
+                ),
+                const SizedBox(height: 3),
+                FittedBox(
+                  fit: BoxFit.scaleDown,
+                  alignment: Alignment.centerLeft,
+                  child: Row(
+                    children: [
+                      Text(
+                        currencyFormat.format(amount),
+                        style: AppFonts.mainStyle(
+                          context: context,
+                          color: Colors.white,
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      Text(
+                        " DH",
+                        style: AppFonts.mainStyle(
+                          context: context,
+                          color: color,
+                          fontSize: 11,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
 
-// ==========================================
-// 2️⃣ Expense Breakdown (Styled)
-// ==========================================
+// ============================================================
+// 2️⃣ Expense Breakdown — Redesigned
+// ============================================================
 class _ExpenseBreakdownSection extends StatefulWidget {
   const _ExpenseBreakdownSection();
 
@@ -284,7 +392,8 @@ class _ExpenseBreakdownSection extends StatefulWidget {
   State<_ExpenseBreakdownSection> createState() => _ExpenseBreakdownSectionState();
 }
 
-class _ExpenseBreakdownSectionState extends State<_ExpenseBreakdownSection> with SingleTickerProviderStateMixin {
+class _ExpenseBreakdownSectionState extends State<_ExpenseBreakdownSection>
+    with SingleTickerProviderStateMixin {
   late AnimationController _controller;
 
   @override
@@ -303,18 +412,24 @@ class _ExpenseBreakdownSectionState extends State<_ExpenseBreakdownSection> with
     super.dispose();
   }
 
-  ({String name, IconData icon, Color color}) _getCategoryDetails(String key, LanguageProvider lang) {
+  ({String name, IconData icon, Color color}) _getCategoryDetails(
+      String key, LanguageProvider lang) {
     String translatedName = lang.t(key);
-    
-    // ✅ ألوان الفئات تم تعديلها لتكون متناسقة (أكثر زرقة وبرودة)
     switch (key) {
-      case 'cat_food': return (name: translatedName, icon: Icons.fastfood_rounded, color: const Color(0xFFFFAB91)); 
-      case 'cat_transport': return (name: translatedName, icon: Icons.directions_car_rounded, color: const Color(0xFF64B5F6)); // Blue
-      case 'cat_shopping': return (name: translatedName, icon: Icons.shopping_bag_rounded, color: const Color(0xFFBA68C8)); // Purple
-      case 'cat_bills': return (name: translatedName, icon: Icons.receipt_long_rounded, color: const Color(0xFFFFD54F)); // Yellow
-      case 'cat_health': return (name: translatedName, icon: Icons.medical_services_rounded, color: const Color(0xFFE57373)); // Red
-      case 'cat_salary': return (name: translatedName, icon: Icons.account_balance_wallet_rounded, color: AppColors.accent); // Cyan
-      default: return (name: lang.t('cat_other'), icon: Icons.category_rounded, color: Colors.grey);
+      case 'cat_food':
+        return (name: translatedName, icon: Icons.fastfood_rounded, color: const Color(0xFFFFAB91));
+      case 'cat_transport':
+        return (name: translatedName, icon: Icons.directions_car_rounded, color: const Color(0xFF64B5F6));
+      case 'cat_shopping':
+        return (name: translatedName, icon: Icons.shopping_bag_rounded, color: const Color(0xFFBA68C8));
+      case 'cat_bills':
+        return (name: translatedName, icon: Icons.receipt_long_rounded, color: const Color(0xFFFFD54F));
+      case 'cat_health':
+        return (name: translatedName, icon: Icons.medical_services_rounded, color: const Color(0xFFE57373));
+      case 'cat_salary':
+        return (name: translatedName, icon: Icons.account_balance_wallet_rounded, color: AppColors.accent);
+      default:
+        return (name: lang.t('cat_other'), icon: Icons.category_rounded, color: Colors.grey);
     }
   }
 
@@ -325,15 +440,12 @@ class _ExpenseBreakdownSectionState extends State<_ExpenseBreakdownSection> with
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          "${lang.t('expense_breakdown')} 📉", 
-          style: GoogleFonts.cairo(
-            color: Colors.white,
-            fontSize: 18,
-            fontWeight: FontWeight.bold,
-          ),
+        _SectionHeader(
+          icon: Icons.pie_chart_rounded,
+          iconColor: const Color(0xFFBA68C8),
+          label: lang.t('expense_breakdown'),
         ),
-        const SizedBox(height: 15),
+        const SizedBox(height: 14),
 
         Selector<UserDataProvider, List<String>>(
           selector: (_, provider) => provider.transactions,
@@ -359,7 +471,7 @@ class _ExpenseBreakdownSectionState extends State<_ExpenseBreakdownSection> with
             }
 
             if (categoryTotals.isEmpty) {
-              return _buildEmptyState(lang.t('no_expenses'));
+              return _buildEmptyState(context, lang.t('no_expenses'));
             }
 
             final sortedEntries = categoryTotals.entries.toList()
@@ -373,86 +485,117 @@ class _ExpenseBreakdownSectionState extends State<_ExpenseBreakdownSection> with
                 final entry = sortedEntries[index];
                 final catDetails = _getCategoryDetails(entry.key, lang);
                 final amount = entry.value;
-                final percentage = totalMonthlyExpenses > 0 ? (amount / totalMonthlyExpenses) : 0.0;
+                final percentage =
+                    totalMonthlyExpenses > 0 ? (amount / totalMonthlyExpenses) : 0.0;
 
                 final Animation<double> itemAnimation = CurvedAnimation(
                   parent: _controller,
-                  curve: Interval((1 / sortedEntries.length) * index, 1.0, curve: Curves.easeOutQuart),
+                  curve: Interval(
+                    (1 / sortedEntries.length) * index,
+                    1.0,
+                    curve: Curves.easeOutQuart,
+                  ),
                 );
 
                 return AnimatedBuilder(
                   animation: _controller,
                   builder: (context, child) {
                     final animatedPercent = percentage * itemAnimation.value;
-                    
                     return Transform.translate(
-                      offset: Offset(0, 20 * (1 - itemAnimation.value)), 
+                      offset: Offset(0, 20 * (1 - itemAnimation.value)),
                       child: Opacity(
-                        opacity: itemAnimation.value,
+                        opacity: itemAnimation.value.clamp(0.0, 1.0),
                         child: Container(
-                          margin: const EdgeInsets.only(bottom: 12),
-                          padding: const EdgeInsets.all(12),
+                          margin: const EdgeInsets.only(bottom: 10),
+                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
                           decoration: BoxDecoration(
-                            // ✅ خلفية البطاقات Surface (Navy فاتح)
                             color: AppColors.surface,
-                            borderRadius: BorderRadius.circular(16),
-                            border: Border.all(color: AppColors.primary.withOpacity(0.1)),
+                            borderRadius: BorderRadius.circular(18),
+                            border: Border.all(
+                              color: catDetails.color.withOpacity(0.12),
+                              width: 1,
+                            ),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.12),
+                                blurRadius: 8,
+                                offset: const Offset(0, 3),
+                              ),
+                            ],
                           ),
-                          child: Column(
+                          child: Row(
                             children: [
-                              Row(
-                                children: [
-                                  Container(
-                                    padding: const EdgeInsets.all(10),
-                                    decoration: BoxDecoration(
-                                      color: catDetails.color.withOpacity(0.1),
-                                      borderRadius: BorderRadius.circular(12),
-                                    ),
-                                    child: Icon(catDetails.icon, color: catDetails.color, size: 22),
-                                  ),
-                                  const SizedBox(width: 15),
-                                  Expanded(
-                                    child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
+                              // Icon
+                              Container(
+                                padding: const EdgeInsets.all(10),
+                                decoration: BoxDecoration(
+                                  color: catDetails.color.withOpacity(0.12),
+                                  borderRadius: BorderRadius.circular(14),
+                                ),
+                                child: Icon(catDetails.icon, color: catDetails.color, size: 20),
+                              ),
+                              const SizedBox(width: 14),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Row(
+                                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                       children: [
-                                        Row(
-                                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                          children: [
-                                            Text(
-                                              catDetails.name,
-                                              style: GoogleFonts.cairo(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14),
-                                            ),
-                                            Text(
-                                              "${amount.toInt()} DH",
-                                              style: GoogleFonts.cairo(color: Colors.white70, fontSize: 14),
-                                            ),
-                                          ],
+                                        Text(
+                                          catDetails.name,
+                                          style: AppFonts.mainStyle(
+                                            context: context,
+                                            color: Colors.white,
+                                            fontWeight: FontWeight.bold,
+                                            fontSize: 14,
+                                          ),
                                         ),
-                                        const SizedBox(height: 8),
-                                        Row(
-                                          children: [
-                                            Expanded(
-                                              child: ClipRRect(
-                                                borderRadius: BorderRadius.circular(4),
-                                                child: LinearProgressIndicator(
-                                                  value: animatedPercent,
-                                                  backgroundColor: Colors.grey.withOpacity(0.1),
-                                                  valueColor: AlwaysStoppedAnimation<Color>(catDetails.color),
-                                                  minHeight: 6,
-                                                ),
-                                              ),
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+                                          decoration: BoxDecoration(
+                                            color: catDetails.color.withOpacity(0.12),
+                                            borderRadius: BorderRadius.circular(20),
+                                          ),
+                                          child: Text(
+                                            "${amount.toInt()} DH",
+                                            style: AppFonts.mainStyle(
+                                              context: context,
+                                              color: catDetails.color,
+                                              fontSize: 13,
+                                              fontWeight: FontWeight.bold,
                                             ),
-                                            const SizedBox(width: 10),
-                                            Text(
-                                              "${(animatedPercent * 100).toInt()}%",
-                                              style: GoogleFonts.cairo(color: Colors.grey, fontSize: 12),
-                                            ),
-                                          ],
+                                          ),
                                         ),
                                       ],
                                     ),
-                                  ),
-                                ],
+                                    const SizedBox(height: 10),
+                                    Row(
+                                      children: [
+                                        Expanded(
+                                          child: ClipRRect(
+                                            borderRadius: BorderRadius.circular(6),
+                                            child: LinearProgressIndicator(
+                                              value: animatedPercent,
+                                              backgroundColor: Colors.white.withOpacity(0.06),
+                                              valueColor: AlwaysStoppedAnimation<Color>(catDetails.color),
+                                              minHeight: 6,
+                                            ),
+                                          ),
+                                        ),
+                                        const SizedBox(width: 10),
+                                        Text(
+                                          "${(animatedPercent * 100).toInt()}%",
+                                          style: AppFonts.mainStyle(
+                                            context: context,
+                                            color: Colors.white38,
+                                            fontSize: 12,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ],
+                                ),
                               ),
                             ],
                           ),
@@ -470,9 +613,9 @@ class _ExpenseBreakdownSectionState extends State<_ExpenseBreakdownSection> with
   }
 }
 
-// ==========================================
-// 3️⃣ Tasks Section Widget (Styled)
-// ==========================================
+// ============================================================
+// 3️⃣ Tasks Section — Redesigned
+// ============================================================
 class _TasksSection extends StatefulWidget {
   const _TasksSection();
 
@@ -480,7 +623,8 @@ class _TasksSection extends StatefulWidget {
   State<_TasksSection> createState() => _TasksSectionState();
 }
 
-class _TasksSectionState extends State<_TasksSection> with SingleTickerProviderStateMixin {
+class _TasksSectionState extends State<_TasksSection>
+    with SingleTickerProviderStateMixin {
   late AnimationController _animationController;
   late Animation<double> _animation;
 
@@ -491,7 +635,10 @@ class _TasksSectionState extends State<_TasksSection> with SingleTickerProviderS
       vsync: this,
       duration: const Duration(milliseconds: 1500),
     );
-    _animation = CurvedAnimation(parent: _animationController, curve: Curves.easeOutCubic);
+    _animation = CurvedAnimation(
+      parent: _animationController,
+      curve: Curves.easeOutCubic,
+    );
     _animationController.forward();
   }
 
@@ -501,6 +648,12 @@ class _TasksSectionState extends State<_TasksSection> with SingleTickerProviderS
     super.dispose();
   }
 
+  Color _getProgressColor(double percent) {
+    if (percent >= 1.0) return Colors.greenAccent;
+    if (percent >= 0.5) return Colors.blueAccent;
+    return Colors.orangeAccent;
+  }
+
   @override
   Widget build(BuildContext context) {
     final lang = context.watch<LanguageProvider>();
@@ -508,48 +661,113 @@ class _TasksSectionState extends State<_TasksSection> with SingleTickerProviderS
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          "${lang.t('productivity')} ✅", 
-          style: GoogleFonts.cairo(
-            color: Colors.white,
-            fontSize: 18,
-            fontWeight: FontWeight.bold,
-          ),
+        _SectionHeader(
+          icon: Icons.task_alt_rounded,
+          iconColor: Colors.greenAccent,
+          label: lang.t('productivity'),
         ),
-        const SizedBox(height: 15),
+        const SizedBox(height: 14),
 
         Selector<UserDataProvider, List<String>>(
           selector: (_, provider) => provider.tasks,
-          builder: (context, tasks, child) {
+          builder: (context, allTasks, child) {
+            final dailyTasks = allTasks.where((task) {
+              final parts = task.split('|');
+              return parts.length > 2 && parts[2] == 'true';
+            }).toList();
+
             final now = DateTime.now();
             final todayStr = DateFormat('yyyy-MM-dd').format(now);
             int completedTodayCount = 0;
 
-            for (var task in tasks) {
+            for (var task in dailyTasks) {
               final parts = task.split('|');
               if (parts.length > 6 && parts[6] == todayStr) {
                 completedTodayCount++;
               }
             }
 
-            final totalTasks = tasks.length;
-            final taskProgress = totalTasks > 0 ? completedTodayCount / totalTasks : 0.0;
+            final totalDailyTasks = dailyTasks.length;
+            final taskProgress =
+                totalDailyTasks > 0 ? completedTodayCount / totalDailyTasks : 0.0;
 
-            if (totalTasks < 5) {
-              return _buildEmptyState(lang.t('no_tasks_stats'));
+            if (totalDailyTasks == 0) {
+              return _buildEmptyState(context, lang.t('no_tasks_stats'));
             }
 
+            // ✅ All tasks done — Lottie celebration
+            if (taskProgress >= 1.0) {
+              return Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(vertical: 30, horizontal: 20),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [
+                      Colors.greenAccent.withOpacity(0.07),
+                      AppColors.surface,
+                    ],
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                  ),
+                  borderRadius: BorderRadius.circular(26),
+                  border: Border.all(
+                    color: Colors.greenAccent.withOpacity(0.3),
+                    width: 1.2,
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.greenAccent.withOpacity(0.08),
+                      blurRadius: 28,
+                      spreadRadius: 2,
+                    ),
+                  ],
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Lottie.asset(
+                      'assets/animation/Game asset.json',
+                      width: 160,
+                      height: 160,
+                      fit: BoxFit.contain,
+                      repeat: true,
+                    ),
+                    const SizedBox(height: 10),
+                    Text(
+                      lang.t('all_tasks_done'),
+                      textAlign: TextAlign.center,
+                      style: AppFonts.mainStyle(
+                        context: context,
+                        color: Colors.greenAccent,
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            }
+
+            // Normal state — circular progress + legend
+            final progressColor = _getProgressColor(taskProgress);
+
             return Container(
-              padding: const EdgeInsets.all(20),
+              padding: const EdgeInsets.all(22),
               decoration: BoxDecoration(
-                // ✅ Surface Color
                 color: AppColors.surface,
-                borderRadius: BorderRadius.circular(24),
-                border: Border.all(color: AppColors.primary.withOpacity(0.2)),
+                borderRadius: BorderRadius.circular(26),
+                border: Border.all(color: AppColors.primary.withOpacity(0.2), width: 1),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.15),
+                    blurRadius: 12,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
               ),
               child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceAround,
                 children: [
+                  // Circular progress
                   AnimatedBuilder(
                     animation: _animation,
                     builder: (context, child) {
@@ -557,37 +775,69 @@ class _TasksSectionState extends State<_TasksSection> with SingleTickerProviderS
                         alignment: Alignment.center,
                         children: [
                           SizedBox(
-                            height: 100,
-                            width: 100,
+                            height: 106,
+                            width: 106,
                             child: CircularProgressIndicator(
                               value: taskProgress * _animation.value,
-                              strokeWidth: 8,
-                              backgroundColor: Colors.white10,
-                              color: AppColors.primary, // ✅ Royal Blue progress
-                              strokeCap: StrokeCap.round, 
+                              strokeWidth: 9,
+                              backgroundColor: Colors.white.withOpacity(0.07),
+                              color: progressColor,
+                              strokeCap: StrokeCap.round,
                             ),
                           ),
-                          Text(
-                            "${(taskProgress * _animation.value * 100).toInt()}%",
-                            style: GoogleFonts.cairo(
-                              color: AppColors.accent, // ✅ Cyan text
-                              fontSize: 22,
-                              fontWeight: FontWeight.bold,
-                            ),
+                          Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(
+                                "${(taskProgress * _animation.value * 100).toInt()}%",
+                                style: AppFonts.mainStyle(
+                                  context: context,
+                                  color: progressColor,
+                                  fontSize: 22,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              Text(
+                                lang.t('done'),
+                                style: AppFonts.mainStyle(
+                                  context: context,
+                                  color: Colors.white30,
+                                  fontSize: 10,
+                                ),
+                              ),
+                            ],
                           ),
                         ],
                       );
                     },
                   ),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      _buildLegend(AppColors.primary, "${lang.t('completed_today')}: $completedTodayCount"),
-                      const SizedBox(height: 12),
-                      _buildLegend(Colors.white38, "${lang.t('remaining')}: ${totalTasks - completedTodayCount}"),
-                      const SizedBox(height: 12),
-                      _buildLegend(Colors.white, "${lang.t('total')}: $totalTasks"),
-                    ],
+
+                  const SizedBox(width: 24),
+
+                  // Legend
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        _LegendItem(
+                          color: Colors.greenAccent,
+                          label: lang.t('completed_today'),
+                          value: "$completedTodayCount",
+                        ),
+                        const SizedBox(height: 10),
+                        _LegendItem(
+                          color: Colors.orangeAccent,
+                          label: lang.t('remaining'),
+                          value: "${totalDailyTasks - completedTodayCount}",
+                        ),
+                        const SizedBox(height: 10),
+                        _LegendItem(
+                          color: Colors.white54,
+                          label: lang.t('total'),
+                          value: "$totalDailyTasks",
+                        ),
+                      ],
+                    ),
                   ),
                 ],
               ),
@@ -597,39 +847,122 @@ class _TasksSectionState extends State<_TasksSection> with SingleTickerProviderS
       ],
     );
   }
+}
 
-  Widget _buildLegend(Color color, String text) {
+// ============================================================
+// Shared Widgets
+// ============================================================
+
+class _SectionHeader extends StatelessWidget {
+  final IconData icon;
+  final Color iconColor;
+  final String label;
+
+  const _SectionHeader({
+    required this.icon,
+    required this.iconColor,
+    required this.label,
+  });
+
+  @override
+  Widget build(BuildContext context) {
     return Row(
       children: [
         Container(
-          width: 10,
-          height: 10,
-          decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+          padding: const EdgeInsets.all(7),
+          decoration: BoxDecoration(
+            color: iconColor.withOpacity(0.12),
+            borderRadius: BorderRadius.circular(10),
+          ),
+          child: Icon(icon, color: iconColor, size: 16),
         ),
         const SizedBox(width: 10),
-        Text(text, style: GoogleFonts.cairo(color: Colors.white70, fontSize: 13)),
+        Text(
+          label,
+          style: AppFonts.mainStyle(
+            context: context,
+            color: Colors.white,
+            fontSize: 17,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
       ],
     );
   }
 }
 
-Widget _buildEmptyState(String message) {
+class _LegendItem extends StatelessWidget {
+  final Color color;
+  final String label;
+  final String value;
+
+  const _LegendItem({
+    required this.color,
+    required this.label,
+    required this.value,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Container(
+          width: 9,
+          height: 9,
+          decoration: BoxDecoration(
+            color: color,
+            shape: BoxShape.circle,
+            boxShadow: [
+              BoxShadow(color: color.withOpacity(0.5), blurRadius: 4),
+            ],
+          ),
+        ),
+        const SizedBox(width: 10),
+        Expanded(
+          child: Text(
+            label,
+            style: AppFonts.mainStyle(
+              context: context,
+              color: Colors.white54,
+              fontSize: 13,
+            ),
+          ),
+        ),
+        Text(
+          value,
+          style: AppFonts.mainStyle(
+            context: context,
+            color: color,
+            fontSize: 14,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+Widget _buildEmptyState(BuildContext context, String message) {
   return Container(
     width: double.infinity,
-    padding: const EdgeInsets.all(25),
+    padding: const EdgeInsets.symmetric(vertical: 30, horizontal: 20),
     decoration: BoxDecoration(
-      color: AppColors.surface.withOpacity(0.5),
-      borderRadius: BorderRadius.circular(20),
-      border: Border.all(color: Colors.white10),
+      color: AppColors.surface.withOpacity(0.45),
+      borderRadius: BorderRadius.circular(22),
+      border: Border.all(color: Colors.white.withOpacity(0.07)),
     ),
     child: Column(
       children: [
-        const Icon(Icons.info_outline_rounded, size: 40, color: Colors.white38),
+        Icon(Icons.info_outline_rounded, size: 36, color: Colors.white24),
         const SizedBox(height: 10),
         Text(
           message,
           textAlign: TextAlign.center,
-          style: GoogleFonts.cairo(color: Colors.white60, fontSize: 14),
+          style: AppFonts.mainStyle(
+            context: context,
+            color: Colors.white38,
+            fontSize: 13,
+          ),
         ),
       ],
     ),

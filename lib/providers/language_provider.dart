@@ -2,26 +2,40 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class LanguageProvider with ChangeNotifier {
-  String _currentLang = 'ar';
+  String _currentLang = 'ar'; // اللغة الافتراضية
 
   String get currentLang => _currentLang;
 
+  // 🌍 قاموس الترجمة الكامل
   final Map<String, Map<String, String>> _localizedValues = {
-    // 🇸🇦 العربية
+    // 🇸🇦 العربية (الفصحى)
     'ar': {
+      // ✅ صفحة الدخول (Login)
+      'login_welcome': 'مرحبًا بك في تطبيق Zimam',
+      'login_desc': 'تطبيق صُمم لمساعدتك على تنظيم حياتك بشكل أفضل، وإدارة وقتك بذكاء، حتى يمرّ يومك بإنتاجية أعلى وإنجاز أكبر.',
+      'google_login': 'متابعة باستخدام Google',
+      'guest_login': 'تخطي والمتابعة كزائر',
+      'all_tasks_done': 'لقد تم إتمام جميع المهام ✅',
+
+      // 🏠 القائمة الجانبية (Drawer) & التنقل
       'guest_mode': 'وضع زائر',
-      // ✅ الكلمات الناقصة (تمت إضافتها)
       'general': 'عام',
       'account': 'الحساب',
       'version': 'الإصدار',
-      'prayer_reminders': 'التذكير بمواعيد الصلاة',
-
-      // Drawer
       'qibla': 'القبلة',
       'instagram': 'انستغرام',
       'exit': 'خروج',
-
-      // Prayer Names
+      'home': 'الرئيسية',
+      'prayers': 'صلاتي',
+      'finance': 'مالي',
+      'notes': 'أفكاري',
+      'stats': 'إحصائيات',
+      'settings_title': 'الإعدادات',
+      'lang_title': 'لغة التطبيق',
+      'logout': 'تسجيل الخروج',
+      'logout_confirm': 'هل أنت متأكد أنك تريد الخروج؟',
+      
+      // 🕌 الصلاة (Prayers)
       'fajr': 'الفجر',
       'sunrise': 'الشروق',
       'dhuhr': 'الظهر',
@@ -29,25 +43,29 @@ class LanguageProvider with ChangeNotifier {
       'maghrib': 'المغرب',
       'isha': 'العشاء',
       'next_prayer': 'الصلاة القادمة',
-
-      // General
-      'settings_title': 'الإعدادات',
-      'home': 'الرئيسية',
-      'prayers': 'صلاتي',
-      'finance': 'مالي',
-      'notes': 'أفكاري',
-      'stats': 'إحصائيات',
-      'lang_title': 'لغة التطبيق',
-      'logout': 'تسجيل الخروج',
-      'logout_confirm': 'هل أنت متأكد أنك تريد الخروج؟',
-      'cancel': 'إلغاء',
-      'delete': 'حذف',
-      'save': 'حفظ',
-      'update': 'تحديث',
-      'edit': 'تعديل',
-      'confirm_delete': 'تأكيد الحذف',
+      'prayer_reminders': 'التذكير بمواعيد الصلاة',
       
-      // Categories
+      // 💰 المالية (Finance)
+      'current_balance': 'الرصيد الحالي',
+      'budget_spent': 'المتبقي',
+      'add_transaction': 'إضافة معاملة',
+      'recent_transactions': 'آخر المعاملات',
+      'income': 'دخل',
+      'expense': 'مصروف',
+      'start_balance_title': 'مرحباً بك',
+      'start_balance_ask': 'كم هو رصيدك الحالي؟',
+      'salary_dialog_title': 'تعديل الدخل الشهري',
+      'salary_hint': 'أدخل الراتب هنا',
+      'empty_finance': 'لا توجد معاملات بعد',
+      'edit_balance_title': 'تعديل الرصيد الحالي',
+      'edit_balance_desc': 'سيتم تحديث رصيدك وراتبك لهذه القيمة.',
+      'salary_not_set': 'لم يتم تحديد الراتب',
+      'no_expenses': 'لا توجد مصاريف هذا الشهر',
+      'spent_ratio': 'استهلكت',
+      'monthly_budget': 'الميزانية الشهرية',
+      'expense_breakdown': 'أين تذهب أموالك؟',
+
+      // 📂 فئات المصاريف (Categories)
       'cat_food': 'أكل وشرب',
       'cat_transport': 'مواصلات',
       'cat_shopping': 'تسوق',
@@ -60,38 +78,8 @@ class LanguageProvider with ChangeNotifier {
       'cat_study': 'دراسة',
       'cat_other': 'أخرى',
 
-      // Finance UI
-      'current_balance': 'الرصيد الحالي',
-      'budget_spent': 'المتبقي',
-      'add_transaction': 'إضافة معاملة',
-      'recent_transactions': 'آخر المعاملات',
-      'income': 'دخل',
-      'expense': 'مصروف',
-      'start_balance_title': 'مرحباً بك',
-      'start_balance_ask': 'كم هو رصيدك الحالي؟',
-      'salary_dialog_title': 'تعديل الدخل الشهري',
-      'salary_hint': 'أدخل الراتب هنا',
-      'start': 'بدء',
-      'skip': 'تخطي',
-      'empty_finance': 'لا توجد معاملات بعد',
-      'edit_balance_title': 'تعديل الرصيد الحالي',
-      'edit_balance_desc': 'سيتم تحديث رصيدك وراتبك لهذه القيمة.',
-      'success_update': 'تم التحديث بنجاح',
-
-      // Stats UI
-      'overview': 'نظرة عامة',
-      'monthly_budget': 'الميزانية الشهرية',
-      'expense_breakdown': 'أين تذهب أموالك؟',
-      'productivity': 'الإنتاجية اليومية',
-      'completed_today': 'تمت اليوم',
-      'remaining': 'متبقية',
-      'total': 'المجموع الكلي',
-      'spent_ratio': 'استهلكت',
-      'salary_not_set': 'لم يتم تحديد الراتب',
-      'no_expenses': 'لا توجد مصاريف هذا الشهر',
-      'no_tasks_stats': 'البيانات غير كافية للتحليل',
-
-      // Notes & Tasks UI
+      // 📝 المهام (Tasks)
+      'show_more': 'عرض المزيد',
       'my_tasks': 'مهامي',
       'add_task': 'مهمة جديدة',
       'edit_task': 'تعديل المهمة',
@@ -101,40 +89,83 @@ class LanguageProvider with ChangeNotifier {
       'set_reminder': 'ضبط تذكير',
       'task_done_today': '✅ المهمة منجزة اليوم',
       'mark_as_done': 'تحديد المهمة كمنجزة',
-      'delete_task_ask': 'هل أنت متأكد من حذف هذه المهمة نهائياً؟',
+      'delete_task_ask': 'هل أنت متأكد من حذف هذا العنصر؟',
       'empty_notes': 'لا توجد مهام حالياً',
       'tasks_title': 'مهامي اليوم',
       'notes_count': 'مهمة',
-      
-      // Time
-      'today': 'اليوم',
-      'yesterday': 'الأمس',
+      'productivity': 'الإنتاجية اليومية',
+      'completed_today': 'تمت اليوم',
+      'remaining': 'متبقية',
+      'total': 'المجموع الكلي',
+      'no_tasks_stats': 'البيانات غير كافية للتحليل',
+        'confirm_done_title':     'إنهاء المهمة؟',
+  'confirm_done_desc':      'هل أنت متأكد أنك أتممت هذه المهمة؟',
+  'yes':                    'نعم، أتممتها',
 
-      // Qibla
+  'celebration_title':      'رائع! 🎉',
+  'celebration_subtitle':   'لقد أكملت جميع مهامك اليومية',
+  'celebration_dismiss':    'اضغط للإغلاق',
+
+  // ── Finance ──────────────────────────────────────────────
+  'monthly_salary':         'الدخل الشهري',
+  'monthly_salary_desc':    'يُعاد تلقائياً في بداية كل شهر',
+  'month':                  'شهر',
+
+      // 🧭 القبلة والموقع (Qibla & Location)
       'qibla_direction': 'اتجاه القبلة',
       'enable_gps_msg': 'المرجو تفعيل GPS لتحديد القبلة',
       'enable_gps': 'تفعيل GPS',
       'degree_to_kaaba': 'درجة نحو الكعبة',
       'searching_location': 'جاري البحث عن الموقع...',
       'device_not_supported': 'جهازك لا يدعم البوصلة',
+      
+      // ⚙️ عام (Common)
+      'cancel': 'إلغاء',
+      'delete': 'حذف',
+      'save': 'حفظ',
+      'update': 'تحديث',
+      'edit': 'تعديل',
+      'confirm_delete': 'تأكيد الحذف',
+      'start': 'بدء',
+      'skip': 'تخطي',
+      'success_update': 'تم التحديث بنجاح',
       'error': 'خطأ',
+      'today': 'اليوم',
+      'yesterday': 'الأمس',
+      'overview': 'نظرة عامة',
+
+      // 🔥 الـ Streak
+      'streak_title': 'حماس العادات 🔥',
+      'streak_desc': 'أكمل عاداتك اليومية لترفع مستواك!',
+      'streak_empty': 'أضف عادات يومية لتبدأ الحماس!',
+      'level': 'المستوى',
     },
     
     // 🇺🇸 English
     'en': {
-      // ✅ Missing Keys Added
+      'all_tasks_done': 'All tasks completed ✅',
+      'login_welcome': 'Welcome to Zimam',
+      'login_desc': 'An app designed to help you organize your life better and manage your time smartly.',
+      'google_login': 'Continue with Google',
+      'guest_login': 'Skip and continue as guest',
+
+      'guest_mode': 'Guest Mode',
       'general': 'General',
       'account': 'Account',
       'version': 'Version',
-      'prayer_reminders': 'Prayer Reminders',
-
-      // Drawer
-      'guest_mode': 'Guest Mode',
       'qibla': 'Qibla',
       'instagram': 'Instagram',
       'exit': 'Exit',
+      'home': 'Home',
+      'prayers': 'Prayers',
+      'finance': 'Finance',
+      'notes': 'Tasks',
+      'stats': 'Stats',
+      'settings_title': 'Settings',
+      'lang_title': 'Language',
+      'logout': 'Logout',
+      'logout_confirm': 'Are you sure you want to logout?',
 
-      // Prayer Names
       'fajr': 'Fajr',
       'sunrise': 'Sunrise',
       'dhuhr': 'Dhuhr',
@@ -142,25 +173,27 @@ class LanguageProvider with ChangeNotifier {
       'maghrib': 'Maghrib',
       'isha': 'Isha',
       'next_prayer': 'Next Prayer',
+      'prayer_reminders': 'Prayer Reminders',
 
-      // General
-      'settings_title': 'Settings',
-      'home': 'Home',
-      'prayers': 'Prayers',
-      'finance': 'Finance',
-      'notes': 'Tasks',
-      'stats': 'Stats',
-      'lang_title': 'Language',
-      'logout': 'Logout',
-      'logout_confirm': 'Are you sure you want to logout?',
-      'cancel': 'Cancel',
-      'delete': 'Delete',
-      'save': 'Save',
-      'update': 'Update',
-      'edit': 'Edit',
-      'confirm_delete': 'Confirm Delete',
-      
-      // Categories
+      'current_balance': 'Current Balance',
+      'budget_spent': 'Remaining',
+      'add_transaction': 'Add Transaction',
+      'recent_transactions': 'Recent Transactions',
+      'income': 'Income',
+      'expense': 'Expense',
+      'start_balance_title': 'Welcome',
+      'start_balance_ask': 'What is your current balance?',
+      'salary_dialog_title': 'Edit Monthly Salary',
+      'salary_hint': 'Enter salary here',
+      'empty_finance': 'No transactions yet',
+      'edit_balance_title': 'Edit Current Balance',
+      'edit_balance_desc': 'Your balance and salary will be updated.',
+      'salary_not_set': 'Salary not set',
+      'no_expenses': 'No expenses this month',
+      'spent_ratio': 'Spent',
+      'monthly_budget': 'Monthly Budget',
+      'expense_breakdown': 'Where your money goes?',
+
       'cat_food': 'Food',
       'cat_transport': 'Transport',
       'cat_shopping': 'Shopping',
@@ -173,39 +206,8 @@ class LanguageProvider with ChangeNotifier {
       'cat_study': 'Study',
       'cat_other': 'Other',
 
-      // Finance UI
-      'current_balance': 'Current Balance',
-      'budget_spent': 'Remaining',
-      'add_transaction': 'Add Transaction',
-      'recent_transactions': 'Recent Transactions',
-      'income': 'Income',
-      'expense': 'Expense',
-      'start_balance_title': 'Welcome',
-      'start_balance_ask': 'What is your current balance?',
-      'salary_dialog_title': 'Edit Monthly Salary',
-      'salary_hint': 'Enter salary here',
-      'start': 'Start',
-      'skip': 'Skip',
-      'empty_finance': 'No transactions yet',
-      'edit_balance_title': 'Edit Current Balance',
-      'edit_balance_desc': 'Your balance and salary will be updated.',
-      'success_update': 'Updated successfully',
-
-      // Stats UI
-      'overview': 'Overview',
-      'monthly_budget': 'Monthly Budget',
-      'expense_breakdown': 'Where your money goes?',
-      'productivity': 'Daily Productivity',
-      'completed_today': 'Done Today',
-      'remaining': 'Remaining',
-      'total': 'Total',
-      'spent_ratio': 'Spent',
-      'salary_not_set': 'Salary not set',
-      'no_expenses': 'No expenses this month',
-      'no_tasks_stats': 'Not enough data to analyze',
-
-      // Notes UI
       'my_tasks': 'My Tasks',
+      'show_more': 'Show More',
       'add_task': 'New Task',
       'edit_task': 'Edit Task',
       'task_title_hint': 'What do you want to do?',
@@ -214,40 +216,81 @@ class LanguageProvider with ChangeNotifier {
       'set_reminder': 'Set Reminder',
       'task_done_today': '✅ Done Today',
       'mark_as_done': 'Mark as Done',
-      'delete_task_ask': 'Are you sure you want to delete this task?',
+      'delete_task_ask': 'Are you sure you want to delete this?',
       'empty_notes': 'No tasks yet',
       'tasks_title': 'My Tasks Today',
       'notes_count': 'Tasks',
-      
-      // Time
-      'today': 'Today',
-      'yesterday': 'Yesterday',
+      'productivity': 'Daily Productivity',
+      'completed_today': 'Done Today',
+      'remaining': 'Remaining',
+      'total': 'Total',
+      'no_tasks_stats': 'Not enough data to analyze',
+      'confirm_done_title':     'Task completed?',
+  'confirm_done_desc':      'Are you sure you have finished this task?',
+  'yes':                    'Yes, done!',
 
-      // Qibla
+  'celebration_title':      'Amazing! 🎉',
+  'celebration_subtitle':   'You completed all your daily tasks',
+  'celebration_dismiss':    'Tap to close',
+
+  // ── Finance ───────────────────────────────────────────
+  'monthly_salary':         'Monthly Income',
+  'monthly_salary_desc':    'Resets automatically at the start of each month',
+  'month':                  'month',
+
       'qibla_direction': 'Qibla Direction',
       'enable_gps_msg': 'Please enable GPS to find Qibla',
       'enable_gps': 'Enable GPS',
       'degree_to_kaaba': 'degrees to Kaaba',
       'searching_location': 'Searching for location...',
       'device_not_supported': 'Device not supported',
+
+      'cancel': 'Cancel',
+      'delete': 'Delete',
+      'save': 'Save',
+      'update': 'Update',
+      'edit': 'Edit',
+      'confirm_delete': 'Confirm Delete',
+      'start': 'Start',
+      'skip': 'Skip',
+      'success_update': 'Updated successfully',
       'error': 'Error',
+      'today': 'Today',
+      'yesterday': 'Yesterday',
+      'overview': 'Overview',
+
+      // 🔥 الـ Streak
+      'streak_title': 'Habit Streak 🔥',
+      'streak_desc': 'Complete daily habits to level up!',
+      'streak_empty': 'Add daily habits to start the streak!',
+      'level': 'Level',
     },
 
     // 🇫🇷 Français
     'fr': {
-      // ✅ Missing Keys Added
+      'all_tasks_done': 'Toutes les tâches sont terminées ✅',
+      'login_welcome': 'Bienvenue sur Zimam',
+      'login_desc': 'Une application conçue pour vous aider à mieux organiser votre vie et gérer votre temps intelligemment.',
+      'google_login': 'Continuer avec Google',
+      'guest_login': 'Passer et continuer en invité',
+      'show_more': 'Voir plus',
+      'guest_mode': 'Mode Invité',
       'general': 'Général',
       'account': 'Compte',
       'version': 'Version',
-      'prayer_reminders': 'Rappels de Prière',
-
-      // Drawer
-      'guest_mode': 'Mode Invité',
       'qibla': 'Qibla',
       'instagram': 'Instagram',
       'exit': 'Quitter',
+      'home': 'Accueil',
+      'prayers': 'Prières',
+      'finance': 'Finance',
+      'notes': 'Tâches',
+      'stats': 'Stats',
+      'settings_title': 'Paramètres',
+      'lang_title': 'Langue',
+      'logout': 'Déconnexion',
+      'logout_confirm': 'Voulez-vous vraiment vous déconnecter ?',
 
-      // Prayer Names
       'fajr': 'Fajr',
       'sunrise': 'Lever du soleil',
       'dhuhr': 'Dhuhr',
@@ -255,25 +298,27 @@ class LanguageProvider with ChangeNotifier {
       'maghrib': 'Maghrib',
       'isha': 'Isha',
       'next_prayer': 'Prochaine Prière',
+      'prayer_reminders': 'Rappels de Prière',
 
-      // General
-      'settings_title': 'Paramètres',
-      'home': 'Accueil',
-      'prayers': 'Prières',
-      'finance': 'Finance',
-      'notes': 'Tâches',
-      'stats': 'Stats',
-      'lang_title': 'Langue',
-      'logout': 'Déconnexion',
-      'logout_confirm': 'Voulez-vous vraiment vous déconnecter ?',
-      'cancel': 'Annuler',
-      'delete': 'Supprimer',
-      'save': 'Enregistrer',
-      'update': 'Mettre à jour',
-      'edit': 'Modifier',
-      'confirm_delete': 'Confirmer la suppression',
-      
-      // Categories
+      'current_balance': 'Solde Actuel',
+      'budget_spent': 'Restant',
+      'add_transaction': 'Ajouter Transaction',
+      'recent_transactions': 'Transactions Récentes',
+      'income': 'Revenu',
+      'expense': 'Dépense',
+      'start_balance_title': 'Bienvenue',
+      'start_balance_ask': 'Quel est votre solde actuel ?',
+      'salary_dialog_title': 'Modifier le Salaire',
+      'salary_hint': 'Entrez le salaire ici',
+      'empty_finance': 'Aucune transaction',
+      'edit_balance_title': 'Modifier le Solde',
+      'edit_balance_desc': 'Votre solde et salaire seront mis à jour.',
+      'salary_not_set': 'Salaire non défini',
+      'no_expenses': 'Aucune dépense ce mois',
+      'spent_ratio': 'Dépensé',
+      'monthly_budget': 'Budget Mensuel',
+      'expense_breakdown': 'Où va votre argent ?',
+
       'cat_food': 'Nourriture',
       'cat_transport': 'Transport',
       'cat_shopping': 'Achats',
@@ -285,39 +330,7 @@ class LanguageProvider with ChangeNotifier {
       'cat_religion': 'Religion',
       'cat_study': 'Études',
       'cat_other': 'Autre',
-      
-      // Finance UI
-      'current_balance': 'Solde Actuel',
-      'budget_spent': 'Restant',
-      'add_transaction': 'Ajouter Transaction',
-      'recent_transactions': 'Transactions Récentes',
-      'income': 'Revenu',
-      'expense': 'Dépense',
-      'start_balance_title': 'Bienvenue',
-      'start_balance_ask': 'Quel est votre solde actuel ?',
-      'salary_dialog_title': 'Modifier le Salaire',
-      'salary_hint': 'Entrez le salaire ici',
-      'start': 'Commencer',
-      'skip': 'Passer',
-      'empty_finance': 'Aucune transaction',
-      'edit_balance_title': 'Modifier le Solde',
-      'edit_balance_desc': 'Votre solde et salaire seront mis à jour.',
-      'success_update': 'Mis à jour avec succès',
 
-      // Stats UI
-      'overview': 'Aperçu',
-      'monthly_budget': 'Budget Mensuel',
-      'expense_breakdown': 'Où va votre argent ?',
-      'productivity': 'Productivité',
-      'completed_today': 'Fait aujourd\'hui',
-      'remaining': 'Restant',
-      'total': 'Total',
-      'spent_ratio': 'Dépensé',
-      'salary_not_set': 'Salaire non défini',
-      'no_expenses': 'Aucune dépense ce mois',
-      'no_tasks_stats': 'Pas assez de données',
-
-      // Notes UI
       'my_tasks': 'Mes Tâches',
       'add_task': 'Nouvelle Tâche',
       'edit_task': 'Modifier Tâche',
@@ -327,40 +340,82 @@ class LanguageProvider with ChangeNotifier {
       'set_reminder': 'Définir un rappel',
       'task_done_today': '✅ Fait aujourd\'hui',
       'mark_as_done': 'Marquer comme fait',
-      'delete_task_ask': 'Supprimer cette tâche définitivement ?',
+      'delete_task_ask': 'Supprimer définitivement ?',
       'empty_notes': 'Aucune tâche',
       'tasks_title': 'Tâches d\'aujourd\'hui',
       'notes_count': 'Notes',
+      'productivity': 'Productivité',
+      'completed_today': 'Fait aujourd\'hui',
+      'remaining': 'Restant',
+      'total': 'Total',
+      'no_tasks_stats': 'Pas assez de données',
+      'confirm_done_title':     'Tâche terminée ?',
+  'confirm_done_desc':      'Êtes-vous sûr d\'avoir accompli cette tâche ?',
+  'yes':                    'Oui, c\'est fait !',
 
-      // Qibla
+  'celebration_title':      'Bravo ! 🎉',
+  'celebration_subtitle':   'Vous avez complété toutes vos tâches du jour',
+  'celebration_dismiss':    'Appuyez pour fermer',
+
+  // ── Finance ───────────────────────────────────────────
+  'monthly_salary':         'Revenu mensuel',
+  'monthly_salary_desc':    'Se réinitialise automatiquement chaque mois',
+  'month':                  'mois',
+
       'qibla_direction': 'Direction Qibla',
       'enable_gps_msg': 'Veuillez activer le GPS',
       'enable_gps': 'Activer GPS',
       'degree_to_kaaba': 'degrés vers la Kaaba',
       'searching_location': 'Recherche de position...',
       'device_not_supported': 'Appareil non supporté',
+
+      'cancel': 'Annuler',
+      'delete': 'Supprimer',
+      'save': 'Enregistrer',
+      'update': 'Mettre à jour',
+      'edit': 'Modifier',
+      'confirm_delete': 'Confirmer la suppression',
+      'start': 'Commencer',
+      'skip': 'Passer',
+      'success_update': 'Mis à jour avec succès',
       'error': 'Erreur',
-      
-      // Time
       'today': 'Aujourd\'hui',
       'yesterday': 'Hier',
+      'overview': 'Aperçu',
+
+      // 🔥 الـ Streak
+      'streak_title': 'Série d\'habitudes 🔥',
+      'streak_desc': 'Terminez vos habitudes pour monter de niveau!',
+      'streak_empty': 'Ajoutez des habitudes pour commencer!',
+      'level': 'Niveau',
     },
 
-    // 🇲🇦 الدارجة
+    // 🇲🇦 الدارجة المغربية
     'da': {
-      // ✅ Missing Keys Added
+      'all_tasks_done': 'تكملو جميع المهام ✅',
+      'show_more': 'شوف كتر',
+      'login_welcome': 'مرحبا بك فـ Zimam',
+      'login_desc': 'تطبيق تصايب باش يعاونك تنظم حياتك مزيان، وتسير وقتك بذكاء، باش دوز نهارك بخير وعلى خير.',
+      'google_login': 'كمل بـ Google',
+      'guest_login': 'دوز وكمل كـ زائر',
+
+      'guest_mode': 'زائر',
       'general': 'عام',
       'account': 'الحساب',
       'version': 'نسخة',
-      'prayer_reminders': 'تذكير بالصلاة',
-
-      // Drawer
-      'guest_mode': 'زائر',
       'qibla': 'القبلة',
       'instagram': 'انستغرام',
       'exit': 'خروج',
+      'home': 'الرئيسية',
+      'prayers': 'صلاتي',
+      'finance': 'فلوسي',
+      'notes': 'مذكراتي',
+      'stats': 'الإحصائيات',
+      'settings_title': 'الإعدادات',
+      'lang_title': 'اللغة',
+      'logout': 'خرج من الحساب',
+      'logout_confirm': 'واش بصح بغيتي تخرج؟',
 
-      // Prayer Names
       'fajr': 'الفجر',
       'sunrise': 'الشروق',
       'dhuhr': 'الظهر',
@@ -368,38 +423,8 @@ class LanguageProvider with ChangeNotifier {
       'maghrib': 'المغرب',
       'isha': 'العشاء',
       'next_prayer': 'الصلاة الجاية',
+      'prayer_reminders': 'تذكير بالصلاة',
 
-      // General
-      'settings_title': 'الإعدادات',
-      'home': 'الرئيسية',
-      'prayers': 'صلاتي',
-      'finance': 'فلوسي',
-      'notes': 'مذكراتي',
-      'stats': 'الإحصائيات',
-      'lang_title': 'اللغة',
-      'logout': 'خرج من الحساب',
-      'logout_confirm': 'واش بصح بغيتي تخرج؟',
-      'cancel': 'رجع',
-      'delete': 'مسح',
-      'save': 'سجل',
-      'update': 'بدل',
-      'edit': 'عدل',
-      'confirm_delete': 'أكد المسح',
-      
-      // Categories
-      'cat_food': 'ماكلة',
-      'cat_transport': 'طرقان',
-      'cat_shopping': 'تقضية',
-      'cat_salary': 'مانضة',
-      'cat_bills': 'الماء والضو',
-      'cat_health': 'طبيب',
-      'cat_personal': 'ديالي',
-      'cat_work': 'خدمة',
-      'cat_religion': 'دين',
-      'cat_study': 'قراية',
-      'cat_other': 'شي حاجة أخرى',
-      
-      // Finance UI
       'current_balance': 'شحال عندي',
       'budget_spent': 'شحال بقى',
       'add_transaction': 'زيد شي حاجة',
@@ -410,28 +435,28 @@ class LanguageProvider with ChangeNotifier {
       'start_balance_ask': 'بشحال باغي تبدا الرصيد؟',
       'salary_dialog_title': 'عدل المانضة الشهرية',
       'salary_hint': 'كتب المانضة هنا',
-      'start': 'بدا',
-      'skip': 'دوز',
       'empty_finance': 'مازال ما دخلتي والو',
       'edit_balance_title': 'عدل الرصيد الحالي',
       'edit_balance_desc': 'غادي يتبدل الرصيد والمانضة بجوج.',
-      'success_update': 'تصايبات بنجاح',
-
-      // Stats UI
-      'overview': 'نظرة عامة',
-      'monthly_budget': 'الميزانية د الشهر',
-      'expense_breakdown': 'فين كتمشي فلوسك؟',
-      'productivity': 'الجهد ديال اليوم',
-      'completed_today': 'ساليتي اليوم',
-      'remaining': 'بقات ليك',
-      'total': 'المجموع',
-      'spent_ratio': 'خسرتي',
       'salary_not_set': 'ماحددتيش المانضة',
       'no_expenses': 'ما خسرتي والو هاد الشهر',
-      'no_tasks_stats': 'معندكش داتا كافية',
+      'spent_ratio': 'خسرتي',
+      'monthly_budget': 'الميزانية د الشهر',
+      'expense_breakdown': 'فين كتمشي فلوسك؟',
 
-      // Notes UI
-      'my_tasks': ' الملاحظات',
+      'cat_food': 'ماكلة',
+      'cat_transport': 'الطريق',
+      'cat_shopping': 'تقضية',
+      'cat_salary': 'مانضة',
+      'cat_bills': 'الماء والضو',
+      'cat_health': 'طبيب',
+      'cat_personal': 'ديالي',
+      'cat_work': 'خدمة',
+      'cat_religion': 'دين',
+      'cat_study': 'قراية',
+      'cat_other': 'شي حاجة أخرى',
+
+      'my_tasks': 'الملاحظات',
       'add_task': 'زيد ملاحظة',
       'edit_task': 'عدل الملاحظة',
       'task_title_hint': 'شنو باغي دير؟',
@@ -444,32 +469,66 @@ class LanguageProvider with ChangeNotifier {
       'empty_notes': 'ما عندك حتى ملاحظة',
       'tasks_title': 'مهام اليوم',
       'notes_count': 'ملاحظة',
+      'productivity': 'الجهد ديال اليوم',
+      'completed_today': 'ساليتي اليوم',
+      'remaining': 'بقات ليك',
+      'total': 'المجموع',
+      'no_tasks_stats': 'معندكش داتا كافية',
+        'confirm_done_title':     'سليتي المهمة؟',
+  'confirm_done_desc':      'واش متأكد بلي سليتي هاد المهمة؟',
+  'yes':                    'آه، سليتها',
 
-      // Qibla
+  'celebration_title':      'برافو عليك! 🎉',
+  'celebration_subtitle':   'كملتي جميع المهام اليومية ديالك',
+  'celebration_dismiss':    'دوز',
+
+  // ── Finance ──────────────────────────────────────────────
+  'monthly_salary':         'الدخل الشهري',
+  'monthly_salary_desc':    'كيرجع تلقائياً بداية كل شهر',
+  'month':                  'شهر',
+
       'qibla_direction': 'اتجاه القبلة',
       'enable_gps_msg': 'شعل GPS باش تلقى القبلة',
       'enable_gps': 'شعل GPS',
       'degree_to_kaaba': 'درجة للكعبة',
       'searching_location': 'كانقلب على البلاصة...',
       'device_not_supported': 'تلفونك ما فيهش البوصلة',
+
+      'cancel': 'رجع',
+      'delete': 'مسح',
+      'save': 'سجل',
+      'update': 'بدل',
+      'edit': 'عدل',
+      'confirm_delete': 'أكد المسح',
+      'start': 'بدا',
+      'skip': 'دوز',
+      'success_update': 'تصايبات بنجاح',
       'error': 'مشكل',
-      
-      // Time
       'today': 'اليوم',
       'yesterday': 'البارح',
+      'overview': 'نظرة عامة',
+
+      // 🔥 الـ Streak
+      'streak_title': 'الحماس ديالك 🔥',
+      'streak_desc': 'كمل العادات ديالك كل نهار باش تطلع النيڤو!',
+      'streak_empty': 'زيد عادات يومية باش تبدا الحماس!',
+      'level': 'النيڤو',
     },
   };
 
+  // 🔄 دالة الترجمة
   String t(String key) {
     return _localizedValues[_currentLang]?[key] ?? key;
   }
 
+  // 📥 تحميل اللغة المحفوظة عند فتح التطبيق
   Future<void> loadLanguage() async {
     final prefs = await SharedPreferences.getInstance();
     _currentLang = prefs.getString('app_lang') ?? 'ar';
     notifyListeners();
   }
 
+  // 🔄 تغيير اللغة وحفظها
   Future<void> changeLanguage(String langCode) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString('app_lang', langCode);

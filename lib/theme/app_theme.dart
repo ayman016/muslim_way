@@ -1,9 +1,14 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
+// ❌ تم الاستغناء عن google_fonts تماماً لضمان العمل Offline
 import 'app_colors.dart';
 
 class AppTheme {
   static ThemeData getTheme(String langCode) {
+    // ✅ تحديد الخط المحلي بناءً على اللغة للحفاظ على الهوية البصرية لتطبيق Zimam
+    final String localFontFamily = (langCode == 'ar' || langCode == 'da') 
+        ? 'IBMPlexSansArabic' 
+        : 'IBMPlexSans';
+
     return ThemeData(
       useMaterial3: true,
       brightness: Brightness.dark, 
@@ -14,7 +19,6 @@ class AppTheme {
       // ✅ الألوان الرئيسية
       primaryColor: AppColors.primary,
       
-      // ❌ حيدنا const من هنا احتياطاً
       colorScheme: const ColorScheme.dark(
         primary: AppColors.primary,
         secondary: AppColors.accent,
@@ -23,30 +27,31 @@ class AppTheme {
         error: Color(0xFFCF6679),
       ),
 
-      // ✅ الخطوط (هذا هو سبب المشكل، GoogleFonts ليس const)
-      fontFamily: GoogleFonts.cairo().fontFamily,
+      // ✅ الخطوط (تم ربطها بالخطوط المحلية المدمجة في التطبيق)
+      fontFamily: localFontFamily,
       
-      // ✅ النصوص (❌ حيدنا const)
-      textTheme: TextTheme(
+      // ✅ النصوص 
+      textTheme: const TextTheme(
         bodyMedium: TextStyle(color: AppColors.textWhite),
         bodyLarge: TextStyle(color: AppColors.textWhite),
         titleLarge: TextStyle(color: AppColors.textWhite, fontWeight: FontWeight.bold),
       ),
 
-      // ✅ AppBar (❌ حيدنا const بسبب GoogleFonts)
+      // ✅ AppBar 
       appBarTheme: AppBarTheme(
         backgroundColor: AppColors.background.withOpacity(0.95),
         elevation: 0,
         centerTitle: true,
         iconTheme: const IconThemeData(color: AppColors.textWhite),
-        titleTextStyle: GoogleFonts.cairo(
+        titleTextStyle: TextStyle( // ✅ استخدام TextStyle العادي مع الخط المحلي
+          fontFamily: localFontFamily,
           color: AppColors.textWhite,
           fontSize: 20,
           fontWeight: FontWeight.bold,
         ),
       ),
       
-      // ✅ Cards (تم التعديل لتجنب الخطأ)
+      // ✅ Cards 
       cardTheme: CardThemeData(
         color: AppColors.surface,
         elevation: 4,
@@ -56,21 +61,23 @@ class AppTheme {
         ),
       ),
 
-      // ✅ Floating Action Button (❌ حيدنا const حسب نصيحة Copilot)
+      // ✅ Floating Action Button 
       floatingActionButtonTheme: const FloatingActionButtonThemeData(
         backgroundColor: AppColors.primary,
         foregroundColor: Colors.white,
       ),
       
-      // ✅ Dialogs (❌ حيدنا const بسبب GoogleFonts)
+      // ✅ Dialogs 
       dialogTheme: DialogThemeData(
         backgroundColor: AppColors.surface,
-        titleTextStyle: GoogleFonts.cairo(
+        titleTextStyle: TextStyle( // ✅ استخدام TextStyle العادي مع الخط المحلي
+          fontFamily: localFontFamily,
           color: AppColors.textWhite, 
           fontSize: 20, 
           fontWeight: FontWeight.bold
         ),
-        contentTextStyle: GoogleFonts.cairo(
+        contentTextStyle: TextStyle( // ✅ استخدام TextStyle العادي مع الخط المحلي
+          fontFamily: localFontFamily,
           color: AppColors.textGrey
         ),
       ),

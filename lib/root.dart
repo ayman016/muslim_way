@@ -1,30 +1,32 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:muslim_way/StatsPage.dart';
 import 'package:muslim_way/auth_service.dart';
+import 'package:muslim_way/auth_wrapper.dart';
 import 'package:provider/provider.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:muslim_way/providers/prayer_provider.dart';
 import 'package:muslim_way/providers/user_data_provider.dart';
 import 'package:muslim_way/finance_page.dart';
-import 'package:muslim_way/qiblapart.dart'; // تأكد أن اسم الملف صحيح
+import 'package:muslim_way/qiblapart.dart';
 import 'package:muslim_way/home_tab.dart';
 import 'package:muslim_way/notes_page.dart';
 import 'package:muslim_way/settings_page.dart';
 import 'package:muslim_way/providers/language_provider.dart';
 import 'package:muslim_way/login_page.dart';
 import 'package:url_launcher/url_launcher.dart';
-
-// ✅ تعريف الألوان (الهوية البصرية الجديدة)
-const Color kDeepSlateNavy = Color(0xFF1A202C); // الخلفية الأساسية (Base)
-const Color kRoyalBlue = Color(0xFF0056D2);     // اللون المهيمن (Dominant)
-const Color kBrightCyan = Color(0xFF00C2CB);    // لون التمييز (Accent)
+import 'package:muslim_way/theme/app_colors.dart';
+import 'package:muslim_way/theme/app_fonts.dart';
 
 class Root extends StatefulWidget {
   const Root({super.key});
 
   @override
   State<Root> createState() => _RootState();
+}
+
+class SwitchTabNotification extends Notification {
+  final int newIndex;
+  const SwitchTabNotification(this.newIndex);
 }
 
 class _RootState extends State<Root> {
@@ -58,10 +60,10 @@ class _RootState extends State<Root> {
 
   String _getTitle(int index, LanguageProvider lang) {
     switch (index) {
-      case 0: return "Zimam";
-      case 1: return lang.t('stats');
-      case 2: return lang.t('finance');
-      case 3: return lang.t('notes');
+      case 0:  return "Zimam";
+      case 1:  return lang.t('stats');
+      case 2:  return lang.t('finance');
+      case 3:  return lang.t('notes');
       default: return "Zimam";
     }
   }
@@ -73,11 +75,9 @@ class _RootState extends State<Root> {
     return Scaffold(
       extendBody: true,
       extendBodyBehindAppBar: true,
-      
-      // ✅ AppBar
       appBar: AppBar(
         iconTheme: const IconThemeData(color: Colors.white),
-        backgroundColor: kDeepSlateNavy.withOpacity(0.8),
+        backgroundColor: AppColors.background.withOpacity(0.8),
         centerTitle: true,
         elevation: 0,
         title: Row(
@@ -87,7 +87,12 @@ class _RootState extends State<Root> {
             const SizedBox(width: 10),
             Text(
               _getTitle(_currentIndex, lang),
-              style: GoogleFonts.cairo(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 18),
+              style: AppFonts.mainStyle(
+                context: context,
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+                fontSize: 18,
+              ),
             ),
           ],
         ),
@@ -98,86 +103,83 @@ class _RootState extends State<Root> {
                 context.read<PrayerProvider>().forceUpdateLocation();
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(
-                    content: Text(lang.t('update'), style: GoogleFonts.cairo(color: Colors.white)), 
+                    content: Text(
+                      lang.t('update'),
+                      style: AppFonts.mainStyle(context: context, listen: false, color: Colors.white),
+                    ),
                     duration: const Duration(seconds: 1),
-                    backgroundColor: kRoyalBlue, 
-                  )
+                    backgroundColor: AppColors.primary,
+                  ),
                 );
               },
               icon: Container(
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  color: kBrightCyan.withOpacity(0.15),
-                  shape: BoxShape.circle
+                  color: AppColors.accent.withOpacity(0.15),
+                  shape: BoxShape.circle,
                 ),
-                child: const Icon(Icons.location_on, color: kBrightCyan, size: 20),
+                child: const Icon(Icons.location_on, color: AppColors.accent, size: 20),
               ),
-            )
+            ),
         ],
       ),
-
-      // ✅ استدعاء القائمة الجانبية
       drawer: const AppDrawer(),
-
-      body: Stack(
-        children: [
-          // الخلفية العامة المتدرجة
-          Container(
-            width: double.infinity,
-            height: double.infinity,
-            decoration: BoxDecoration(
-              gradient: LinearGradient(colors: [
-                const Color(0xFF0056D2).withAlpha(90),
-                const Color(0xFF1A202C),
-              ],
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
-              )
-            ),
-          ),
-          
-          PageView(
-            controller: _pageController,
-            physics: const BouncingScrollPhysics(),
-            onPageChanged: _onPageChanged,
-            children: _pages,
-          ),
-
-          // ✅ النافبار العائمة (Floating Navbar)
-          Positioned(
-            bottom: 30,
-            left: 20,
-            right: 20,
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 12),
+      body: NotificationListener<SwitchTabNotification>(
+        onNotification: (notification) {
+          _onNavTapped(notification.newIndex);
+          return true;
+        },
+        child: Stack(
+          children: [
+            Container(
+              width: double.infinity,
+              height: double.infinity,
               decoration: BoxDecoration(
-                color: kDeepSlateNavy.withOpacity(0.95),
-                borderRadius: BorderRadius.circular(40),
-                border: Border.all(color: Colors.white.withOpacity(0.1), width: 0.5),
-                boxShadow: [
-                  BoxShadow(color: Colors.black.withOpacity(0.5), blurRadius: 20, offset: const Offset(0, 10))
-                ],
-              ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  _NavBarItem(index: 0, currentIndex: _currentIndex, icon: Icons.home_rounded, label: lang.t('home'), onTap: _onNavTapped),
-                  _NavBarItem(index: 1, currentIndex: _currentIndex, icon: Icons.bar_chart_rounded, label: lang.t('stats'), onTap: _onNavTapped),
-                  _NavBarItem(index: 2, currentIndex: _currentIndex, icon: Icons.account_balance_wallet_rounded, label: lang.t('finance'), onTap: _onNavTapped),
-                  _NavBarItem(index: 3, currentIndex: _currentIndex, icon: Icons.edit_note_rounded, label: lang.t('notes'), onTap: _onNavTapped),
-                ],
+                gradient: LinearGradient(
+                  colors: [AppColors.primary.withAlpha(90), AppColors.background],
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                ),
               ),
             ),
-          ),
-        ],
+            PageView(
+              controller: _pageController,
+              physics: const BouncingScrollPhysics(),
+              onPageChanged: _onPageChanged,
+              children: _pages,
+            ),
+            Positioned(
+              bottom: 30,
+              left: 20,
+              right: 20,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 12),
+                decoration: BoxDecoration(
+                  color: AppColors.background.withOpacity(0.95),
+                  borderRadius: BorderRadius.circular(40),
+                  border: Border.all(color: Colors.white.withOpacity(0.1), width: 0.5),
+                  boxShadow: [
+                    BoxShadow(color: Colors.black.withOpacity(0.5), blurRadius: 20, offset: const Offset(0, 10)),
+                  ],
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    _NavBarItem(index: 0, currentIndex: _currentIndex, icon: Icons.home_rounded,                   label: lang.t('home'),    onTap: _onNavTapped),
+                    _NavBarItem(index: 1, currentIndex: _currentIndex, icon: Icons.bar_chart_rounded,              label: lang.t('stats'),   onTap: _onNavTapped),
+                    _NavBarItem(index: 2, currentIndex: _currentIndex, icon: Icons.account_balance_wallet_rounded, label: lang.t('finance'), onTap: _onNavTapped),
+                    _NavBarItem(index: 3, currentIndex: _currentIndex, icon: Icons.edit_note_rounded,              label: lang.t('notes'),   onTap: _onNavTapped),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
 }
 
-// ==========================================
-// ✅ Widget 1: Optimized Navbar Item
-// ==========================================
 class _NavBarItem extends StatelessWidget {
   final int index;
   final int currentIndex;
@@ -195,7 +197,7 @@ class _NavBarItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    bool isSelected = currentIndex == index;
+    final isSelected = currentIndex == index;
     return GestureDetector(
       onTap: () => onTap(index),
       child: AnimatedContainer(
@@ -203,7 +205,7 @@ class _NavBarItem extends StatelessWidget {
         curve: Curves.easeOutBack,
         padding: EdgeInsets.symmetric(horizontal: isSelected ? 16 : 10, vertical: 8),
         decoration: BoxDecoration(
-          color: isSelected ? kRoyalBlue : Colors.transparent,
+          color: isSelected ? AppColors.primary : Colors.transparent,
           borderRadius: BorderRadius.circular(30),
         ),
         child: Row(
@@ -213,9 +215,14 @@ class _NavBarItem extends StatelessWidget {
               const SizedBox(width: 8),
               Text(
                 label,
-                style: GoogleFonts.cairo(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12),
+                style: AppFonts.mainStyle(
+                  context: context,
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 12,
+                ),
               ),
-            ]
+            ],
           ],
         ),
       ),
@@ -223,20 +230,18 @@ class _NavBarItem extends StatelessWidget {
   }
 }
 
-// ==========================================
-// ✅ Widget 2: Full Featured App Drawer (Fixed Guest Mode)
-// ==========================================
 class AppDrawer extends StatelessWidget {
   const AppDrawer({super.key});
 
   void _showLanguageDialog(BuildContext context) {
+    final lang = context.read<LanguageProvider>();
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        backgroundColor: kDeepSlateNavy,
+        backgroundColor: AppColors.background,
         title: Text(
-          context.read<LanguageProvider>().t('lang_title'),
-          style: GoogleFonts.cairo(color: kBrightCyan),
+          lang.t('lang_title'),
+          style: AppFonts.mainStyle(context: context, listen: false, color: AppColors.accent),
         ),
         content: Column(
           mainAxisSize: MainAxisSize.min,
@@ -252,16 +257,18 @@ class AppDrawer extends StatelessWidget {
   }
 
   Widget _buildLangOption(BuildContext context, String name, String code) {
-    final isSelected = context.read<LanguageProvider>().currentLang == code;
+    final lang = context.read<LanguageProvider>();
+    final isSelected = lang.currentLang == code;
     return ListTile(
       title: Text(
         name,
-        style: GoogleFonts.cairo(
-          color: isSelected ? kBrightCyan : Colors.white,
+        style: AppFonts.mainStyle(
+          context: context, listen: false,
+          color: isSelected ? AppColors.accent : Colors.white,
           fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
         ),
       ),
-      trailing: isSelected ? const Icon(Icons.check, color: kBrightCyan) : null,
+      trailing: isSelected ? const Icon(Icons.check, color: AppColors.accent) : null,
       onTap: () {
         context.read<LanguageProvider>().changeLanguage(code);
         Navigator.pop(context);
@@ -274,27 +281,39 @@ class AppDrawer extends StatelessWidget {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        backgroundColor: kDeepSlateNavy,
-        title: Text(lang.t('logout'), style: GoogleFonts.cairo(color: Colors.redAccent)),
-        content: Text(lang.t('logout_confirm'), style: GoogleFonts.cairo(color: Colors.white70)),
+        backgroundColor: AppColors.background,
+        title: Text(
+          lang.t('logout'),
+          style: AppFonts.mainStyle(context: context, listen: false, color: Colors.redAccent),
+        ),
+        content: Text(
+          lang.t('logout_confirm'),
+          style: AppFonts.mainStyle(context: context, listen: false, color: Colors.white70),
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: Text(lang.t('cancel'), style: GoogleFonts.cairo(color: Colors.grey)),
+            child: Text(
+              lang.t('cancel'),
+              style: AppFonts.mainStyle(context: context, listen: false, color: Colors.grey),
+            ),
           ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(backgroundColor: Colors.redAccent),
             onPressed: () async {
-              context.read<UserDataProvider>().clearData();
-              await AuthService().signOut();
+              Navigator.pop(ctx);
+              await AuthService().signOut(); // ✅ A كبير - مصلح
               if (context.mounted) {
                 Navigator.of(context).pushAndRemoveUntil(
-                  MaterialPageRoute(builder: (context) => const LoginPage()),
-                  (Route<dynamic> route) => false,
+                  MaterialPageRoute(builder: (_) => const AuthWrapper()),
+                  (route) => false,
                 );
               }
             },
-            child: Text(lang.t('exit'), style: GoogleFonts.cairo(color: Colors.white)),
+            child: Text(
+              lang.t('exit'),
+              style: AppFonts.mainStyle(context: context, listen: false, color: Colors.white),
+            ),
           ),
         ],
       ),
@@ -303,115 +322,124 @@ class AppDrawer extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final lang = context.watch<LanguageProvider>();
-    final user = FirebaseAuth.instance.currentUser;
-    final bool isGuest = user == null;
+    final lang    = context.watch<LanguageProvider>();
+    final user    = FirebaseAuth.instance.currentUser;
+    final isGuest = user == null;
 
     return Drawer(
-      backgroundColor: kDeepSlateNavy,
+      backgroundColor: AppColors.background,
       elevation: 0,
       width: MediaQuery.of(context).size.width * 0.75,
       child: Column(
         children: [
-          // Header
           UserAccountsDrawerHeader(
-            decoration: const BoxDecoration(
-              color: kRoyalBlue,
-            ),
+            decoration: const BoxDecoration(color: AppColors.primary),
             currentAccountPicture: CircleAvatar(
               radius: 35,
-              backgroundColor: kDeepSlateNavy,
+              backgroundColor: AppColors.background,
               backgroundImage: user?.photoURL != null ? NetworkImage(user!.photoURL!) : null,
-              child: user?.photoURL == null 
-                  ? const Icon(Icons.person, size: 40, color: Colors.white) 
-                  : null,
+              child: user?.photoURL == null ? const Icon(Icons.person, size: 40, color: Colors.white) : null,
             ),
             accountName: Text(
               user?.displayName ?? "Zimam",
-              style: GoogleFonts.cairo(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16),
+              style: AppFonts.mainStyle(context: context, color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16),
             ),
-            // ✅✅✅ تم استبدال النص الثابت بمتغير الترجمة
-            accountEmail: isGuest 
-              ? Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                  decoration: BoxDecoration(color: Colors.white.withOpacity(0.2), borderRadius: BorderRadius.circular(20)),
-                  child: Text(
-                    lang.t('guest_mode'), // ✅ هنا الترجمة
-                    style: GoogleFonts.cairo(color: Colors.white, fontSize: 10)
+            accountEmail: isGuest
+                ? Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.2),
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Text(
+                      lang.t('guest_mode'),
+                      style: AppFonts.mainStyle(context: context, color: Colors.white, fontSize: 10),
+                    ),
+                  )
+                : Text(
+                    user!.email!,
+                    style: AppFonts.mainStyle(context: context, color: Colors.white70),
                   ),
-                )
-              : Text(user!.email!, style: GoogleFonts.cairo(color: Colors.white70)),
           ),
-
-          // Menu Items
           Expanded(
             child: ListView(
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
               children: [
                 _DrawerItem(
-                  icon: Icons.explore_outlined, 
-                  text: lang.t('qibla'), 
+                  icon: Icons.explore_outlined,
+                  text: lang.t('qibla'),
                   onTap: () {
                     Navigator.pop(context);
-                    Navigator.push(context, MaterialPageRoute(builder: (context) => const QiblaPage()));
-                  }
+                    Navigator.push(context, MaterialPageRoute(builder: (_) => const QiblaPage()));
+                  },
                 ),
                 _DrawerItem(
-                  icon: Icons.settings_outlined, 
-                  text: lang.t('settings_title'), 
+                  icon: Icons.settings_outlined,
+                  text: lang.t('settings_title'),
                   onTap: () {
-                    Navigator.pop(context); 
-                    Navigator.push(context, MaterialPageRoute(builder: (context) => const SettingsPage())); 
-                  }
+                    Navigator.pop(context);
+                    Navigator.push(context, MaterialPageRoute(builder: (_) => const SettingsPage()));
+                  },
                 ),
-                
                 _DrawerItem(
-                  icon: Icons.language, 
-                  text: lang.t('lang_title'), 
-                  trailing: Text(lang.currentLang.toUpperCase(), style: const TextStyle(color: kBrightCyan, fontWeight: FontWeight.bold)),
+                  icon: Icons.language,
+                  text: lang.t('lang_title'),
+                  trailing: Text(
+                    lang.currentLang.toUpperCase(),
+                    style: const TextStyle(color: AppColors.accent, fontWeight: FontWeight.bold),
+                  ),
                   onTap: () => _showLanguageDialog(context),
                 ),
-
                 const Divider(color: Colors.white10, thickness: 1, indent: 20, endIndent: 20),
-                
                 _DrawerItem(
-                  icon: Icons.camera_alt_outlined, 
-                  text: lang.t('instagram'), 
+                  icon: Icons.camera_alt_outlined,
+                  text: lang.t('instagram (zimam.app)'),
                   onTap: () async {
-                     final Uri url = Uri.parse('https://www.instagram.com/zimam.app?igsh=Z2V5bDd4bGl6OGdp');
-                     await launchUrl(url, mode: LaunchMode.externalApplication);
-                  }
+                    final Uri nativeUrl = Uri.parse('instagram://user?username=zimam.app');
+                    final Uri webUrl = Uri.parse('https://www.instagram.com/zimam.app/');
+                    try {
+                      if (!await launchUrl(nativeUrl, mode: LaunchMode.externalApplication)) {
+                        await launchUrl(webUrl, mode: LaunchMode.externalApplication);
+                      }
+                    } catch (e) {
+                      await launchUrl(webUrl, mode: LaunchMode.externalApplication);
+                    }
+                  },
                 ),
               ],
             ),
           ),
-
-          // Login/Logout Button
           Padding(
             padding: const EdgeInsets.all(20),
-            child: isGuest 
-              ? SizedBox(
-                  width: double.infinity,
-                  height: 45,
-                  child: ElevatedButton.icon(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: kRoyalBlue,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            child: isGuest
+                ? SizedBox(
+                    width: double.infinity,
+                    height: 45,
+                    child: ElevatedButton.icon(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.primary,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      ),
+                      onPressed: () {
+                        Navigator.pop(context);
+                        Navigator.push(context, MaterialPageRoute(builder: (_) => const LoginPage()));
+                      },
+                      icon: const Icon(Icons.login, color: Colors.white),
+                      label: Text(
+                        lang.t('start'),
+                        style: AppFonts.mainStyle(context: context, color: Colors.white, fontWeight: FontWeight.bold),
+                      ),
                     ),
-                    onPressed: () {
-                      Navigator.pop(context);
-                      Navigator.push(context, MaterialPageRoute(builder: (context) => const LoginPage())); 
-                    },
-                    icon: const Icon(Icons.login, color: Colors.white),
-                    label: Text(lang.t('start'), style: GoogleFonts.cairo(color: Colors.white, fontWeight: FontWeight.bold)),
+                  )
+                : TextButton.icon(
+                    onPressed: () => _logout(context),
+                    icon: const Icon(Icons.logout, color: Colors.redAccent),
+                    label: Text(
+                      lang.t('logout'),
+                      style: AppFonts.mainStyle(context: context, color: Colors.redAccent),
+                    ),
                   ),
-                )
-              : TextButton.icon(
-                  onPressed: () => _logout(context), 
-                  icon: const Icon(Icons.logout, color: Colors.redAccent),
-                  label: Text(lang.t('logout'), style: GoogleFonts.cairo(color: Colors.redAccent)),
-                ),
-          )
+          ),
         ],
       ),
     );
@@ -424,7 +452,12 @@ class _DrawerItem extends StatelessWidget {
   final VoidCallback onTap;
   final Widget? trailing;
 
-  const _DrawerItem({required this.icon, required this.text, required this.onTap, this.trailing});
+  const _DrawerItem({
+    required this.icon,
+    required this.text,
+    required this.onTap,
+    this.trailing,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -435,12 +468,15 @@ class _DrawerItem extends StatelessWidget {
         leading: Container(
           padding: const EdgeInsets.all(8),
           decoration: BoxDecoration(
-            color: kBrightCyan.withOpacity(0.1), 
-            shape: BoxShape.circle
+            color: AppColors.accent.withOpacity(0.1),
+            shape: BoxShape.circle,
           ),
-          child: Icon(icon, color: kBrightCyan, size: 22),
+          child: Icon(icon, color: AppColors.accent, size: 22),
         ),
-        title: Text(text, style: GoogleFonts.cairo(color: Colors.white, fontSize: 16)),
+        title: Text(
+          text,
+          style: AppFonts.mainStyle(context: context, color: Colors.white, fontSize: 16),
+        ),
         trailing: trailing ?? const Icon(Icons.arrow_forward_ios, color: Colors.white24, size: 14),
         onTap: onTap,
         hoverColor: Colors.white10,
